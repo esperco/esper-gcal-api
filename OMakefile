@@ -1,0 +1,18 @@
+OCAML_LIBS = $(OCAML_LIBS_gcal-api)
+
+FILES[] =
+  gcal_t
+  gcal_j
+  gcal_v
+  gcal_api
+  gcal_event
+
+Atdgen(gcal, -j-std)
+OCamlLibrary(gcal-api, $(FILES))
+Meta(gcal-api)
+
+.DEFAULT: META gcal-api.cma gcal-api.cmxa
+
+.PHONY: clean
+clean:
+  rm -f *.o *.a *.cm* *~ *.annot *.run *.opt META $(ATDGEN_OUTFILES)

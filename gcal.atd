@@ -1,0 +1,516 @@
+type geventid = string wrap <ocaml module="Geventid">
+type gcalid = string wrap <ocaml module="Gcalid">
+
+type error_response = {
+  error: error_info;
+}
+
+type error_info = {
+  code: int;
+  message: string;
+  errors: error list;
+}
+
+type error = {
+  domain: string;
+  reason: string;
+}
+
+type calendar_list_response = {
+  kind: string;
+  etag: string;
+  ?nextPageToken: string option;
+  items: calendar_list_item list;
+} <ocaml field_prefix="cl_">
+
+type calendar_list_item = {
+  kind: string;
+  etag: string;
+  id: gcalid;
+  summary: string;
+  ?description: string option;
+  ?location: string option;
+  ?timeZone: string option;
+  ?summaryOverride: string option;
+  ?colorId: string option;
+  ?backgroundColor: string option;
+  ?foregroundColor: string option;
+  ~hidden   <ocaml default="false">: bool;
+  ~selected <ocaml default="false">: bool;
+  ~primary  <ocaml default="false">: bool;
+  ?accessRole: access_role option;
+  ~defaultReminders: reminder list;
+} <ocaml field_prefix="ci_">
+
+(* These are the only fields we need to edit right now.
+   Google Calendar API supports PATCH semantics,
+   so more fields from calendar_list_item can be added here if needed.
+   Otherwise we can omit them. *)
+type calendar_list_item_edit = {
+  ?hidden : bool option;
+  ?selected : bool option;
+} <ocaml field_prefix="ce_">
+
+(** A request to create a new calendar. *)
+type calendar_list_item_create = {
+  summary : string;
+  ?timeZone : string option;
+} <ocaml field_prefix="cc_">
+
+type cached_calendar_list = {
+  ?items : calendar_list_item list option;
+} <ocaml field_prefix="ccl_">
+
+type access_role = [
+  None           <json name="none">
+| FreeBusyReader <json name="freeBusyReader">
+| Owner          <json name="owner">
+| Reader         <json name="reader">
+| Writer         <json name="writer">
+]
+
+type reminder = {
+  method' <json name="method">: reminder_method;
+  minutes: int;
+}
+
+type reminder_method = [
+  Email <json name="email">
+| Sms   <json name="sms">
+| Popup <json name="popup">
+]
+
+type freebusy_request = {
+  timeMin: timestamp;
+  timeMax: timestamp;
+  ?timeZone: string option;
+  ?groupExpansionMax: int option;
+  ?calendarExpansionMax: int option;
+  ~items: calendar_id list;
+} <ocaml field_prefix="bzq_">
+
+type freebusy_response = {
+  kind: string;
+  timeMin: timestamp;
+  timeMax: timestamp;
+  ~groups:    (string * freebusy_group)    list <json repr="object">;
+  ~calendars: (string * freebusy_calendar) list <json repr="object">;
+} <ocaml field_prefix="bz_">
+
+type timestamp <ocaml from="Core" t="timestamp"> = abstract
+type dateonly <ocaml from="Core" t="dateonly"> = abstract
+
+type calendar_id = {
+  id: gcalid;
+} <ocaml field_prefix="cid_">
+
+type freebusy_group = {
+  ~errors: error list;
+  calendars: string list;
+} <ocaml field_prefix="bzg_">
+
+type freebusy_calendar = {
+  ~errors: error list;
+  busy: busy list;
+} <ocaml field_prefix="bzc_">
+
+type busy = {
+  start: timestamp;
+  end' <json name="end">: timestamp;
+}
+
+type event = {
+  kind: string;
+  etag: string;
+  id: geventid;
+  status: event_status;
+  ?htmlLink: string option; (* missing from cancelled events *)
+  ?created: timestamp option; (* missing from cancelled events *)
+  ?updated: timestamp option; (* missing from cancelled events *)
+  ?summary: string option; (* missing from cancelled events *)
+  ?description: string option;
+  ?location: string option;
+  ?colorId: string option;
+  ?creator: person option; (* missing from cancelled events *)
+  ?organizer: person option; (* missing from cancelled events *)
+  ?start: event_time option; (* missing from cancelled events *)
+  ?end: event_time option; (* exclusive; missing from cancelled events *)
+  ~recurrence: string list; (* list of rules *)
+  ?recurringEventId: geventid option;
+  ?originalStartTime: event_time option;
+  ~transparency <ocaml default="`Opaque">: transparency;
+  ~visibility <ocaml default="`Default">: visibility;
+  ?iCalUID: string option; (* missing from cancelled events *)
+  ?sequence: int option; (* missing from cancelled events *)
+  ~attendees: attendee list;
+  ~attendeesOmitted: bool;
+  ?extendedProperties: extendedProperties option;
+  ?gadget: gadget option;
+  ~anyoneCanAddSelf: bool;
+  ~guestsCanInviteOthers <ocaml default="true">: bool;
+  ~guestsCanSeeOtherGuests <ocaml default="true">: bool;
+  ~privateCopy: bool;
+  ?reminders: event_reminders option; (* missing from cancelled events *)
+  ~endTimeUnspecified: bool;
+  ~locked: bool;
+  ?hangoutLink: string option;
+  ?source: source option;
+} <ocaml field_prefix="ev_">
+
+type cached_event = {
+  ?event: event option;
+    (* if the field is missing, this indicates that the event was not found
+       or deleted, so we don't have to make an http call for nothing. *)
+} <ocaml field_prefix="cached_">
+
+type event_edit = {
+  start: event_time;
+  end: event_time;
+  reminders: event_reminders;
+  ~attendees: attendee list;
+
+  ~attendeesOmitted: bool;
+  ?status: event_status option;
+  ?summary: string option;
+  ?description: string option;
+  ?location: string option;
+  ?colorId: string option;
+  ~recurrence: string list; (* list of rules *)
+  ?originalStartTime: event_time option;
+  ~transparency <ocaml default="`Opaque">: transparency;
+  ~visibility <ocaml default="`Default">: visibility;
+  ?sequence: int option;
+  ?extendedProperties: extendedProperties option;
+  ?gadget: gadget option;
+  ~anyoneCanAddSelf: bool;
+  ~guestsCanInviteOthers <ocaml default="true">: bool;
+  ~guestsCanSeeOtherGuests <ocaml default="true">: bool;
+  ?source: source option;
+} <ocaml field_prefix="ew_">
+
+type event_status = [
+  Confirmed <json name="confirmed">
+| Tentative <json name="tentative">
+| Cancelled <json name="cancelled">
+]
+
+type transparency = [
+  Opaque       <json name="opaque">
+| Transparent  <json name="transparent">
+]
+
+type visibility = [
+  Default      <json name="default">
+| Public       <json name="public">
+| Private      <json name="private">
+| Confidential <json name="confidential">
+]
+
+type responseStatus = [
+  NeedsAction <json name="needsAction">
+| Declined    <json name="declined">
+| Tentative   <json name="tentative">
+| Accepted    <json name="accepted">
+]
+
+type person = {
+  ?id: string option;
+  ?email: string option;
+  ?displayName: string option;
+  ~self: bool;
+} <ocaml field_prefix="our_">
+
+type attendee = {
+  ?id: string option;
+  ?email <ocaml name="their_approx_email">: string option;
+  ?displayName: string option;
+  ~self: bool;
+  ~resource: bool;
+  ~optional: bool;
+  responseStatus: responseStatus;
+  ?comment: string option;
+  ~additionalGuests: int;
+} <ocaml field_prefix="their_">
+
+type event_time = {
+  ?date: dateonly option;
+    (* "yyyy-mm-dd", if it is an all-day event *)
+  ?dateTime: timestamp option;
+    (* Google specification: The time, as a combined date-time value
+       (formatted according to RFC 3339).
+       A time zone offset is required unless a time zone
+       is explicitly specified in 'timeZone'.
+
+       Implementation: we assume that the dateTime field provided by
+       Google is complete with timezone offset.
+    *)
+  ?timeZone: string option;
+}
+
+type extendedProperties = {
+  ?private_ <json name="private">: private_extendedProperties option;
+  ?shared: shared_extendedProperties option;
+}
+
+type private_extendedProperties = {
+  (* any fields we want; values must be strings *)
+  ?sample_key: string option;
+}
+
+type shared_extendedProperties = {
+  (* any fields we want; values must be strings *)
+  ?sample_key: string option;
+}
+
+type gadget = {
+  type_ <json name="type">: string;
+  title: string;
+  link: string;
+  iconLink: string;
+  ?width:  int option;
+  ?height: int option;
+  ?display: gadget_display option;
+  ~preferences: (string * string) list <json repr="object">;
+} <ocaml field_prefix="gadget_">
+
+type gadget_display = [
+  Icon <json name="icon">
+| Chip <json name="chip">
+]
+
+type event_reminders = {
+  useDefault: bool;
+  ~overrides: reminder list;
+} <ocaml field_prefix="reminder_">
+
+type source = {
+  url: string;
+  title: string;
+} <ocaml field_prefix="source_">
+
+type event_order_by = [
+  StartTime <json name="startTime">
+| Updated   <json name="updated">
+]
+
+type events_list_response = {
+  kind: string;
+  etag: string;
+  summary: string;
+  ?description: string option;
+  updated: timestamp;
+  timeZone: string;
+  ?accessRole: access_role option;
+  ~defaultReminders: reminder list;
+  ?nextPageToken: string option;
+
+  ?nextSyncToken: string option;
+    (* Token used at a later point in time to retrieve only the entries
+       that have changed since this result was returned.
+       Omitted if further results are available, in which case
+       nextPageToken is provided. *)
+
+  items: event list;
+} <ocaml field_prefix="evs_">
+
+type calendar_metadata = {
+  kind: string;
+  etag: string;
+  id: gcalid;
+  summary: string;
+  ?description: string option;
+  ?location: string option;
+  timeZone: string;
+} <ocaml field_prefix="cal_">
+
+type acl_rule = {
+  kind: string;
+  etag: string;
+  id: string;
+  role: access_role;
+  scope: acl_scope;
+} <ocaml field_prefix="acl_">
+
+(* Limited to fields necessary to create a new rule.
+   Creating a rule that already exists seems to update it
+   rather than create a duplicate. *)
+type new_acl_rule = {
+  role: access_role;
+  scope: acl_scope;
+} <ocaml field_prefix="new_acl_">
+
+type edit_acl_rule = {
+  role: access_role;
+} <ocaml field_prefix="edit_acl_">
+
+type scope_type = [
+  Default <json name="default">
+| User    <json name="user">
+| Group   <json name="group">
+| Domain  <json name="domain">
+]
+
+type acl_scope = {
+  type_ <json name="type">: scope_type;
+  ?value: string option;
+} <ocaml field_prefix="sco_">
+
+type acl_list_response = {
+  kind: string;
+  etag: string;
+  ?nextPageToken: string option;
+  ?nextSyncToken: string option;
+  items: acl_rule list;
+} <ocaml field_prefix="acls_">
+
+type web_hook = [ Web_hook <json name="web_hook"> ]
+
+type watch_events_request_params = {
+  ?ttl: float option;
+    (* Time-to-live in seconds.
+       The time-to-live in seconds for the notification channel.
+       Default is 3600 seconds.
+       Note that the documentation says 'string' but it's a JSON number. *)
+}
+
+(* https://developers.google.com/google-apps/calendar/v3/push#registering *)
+type watch_events_request = {
+  id: string;
+    (* A UUID or similar unique string that identifies this channel. *)
+
+  ?token: string option;
+    (* An arbitrary string delivered to the target address
+       with each notification delivered over this channel. *)
+
+  type_ <json name="type">: web_hook;
+    (* The type of delivery mechanism used for this channel. *)
+
+  address: string;
+    (* HTTPS URL owned by the API user.
+       The address where notifications are delivered for this channel. *)
+
+  (* Two ways of specifying an expiration date occurring in two places
+     in the official documentation. *)
+  ?expiration: float option;
+    (* Unix timestamp in milliseconds *)
+
+  ?params: watch_events_request_params option;
+}
+
+type api_channel = [ Api_channel <json name="api#channel"> ]
+
+type watch_events_response = {
+  kind: api_channel;
+    (* Identifies this as a notification channel used to watch
+       for changes to a resource. Value: the fixed string "api#channel". *)
+
+  id: string;
+    (* A UUID or similar unique string that identifies this channel. *)
+
+  resourceId: string;
+    (* An opaque ID that identifies the resource being watched
+       on this channel. Stable across different API versions. *)
+
+  resourceUri: string;
+    (* A version-specific identifier for the watched resource. *)
+
+  ?token: string option;
+    (* An arbitrary string delivered to the target address with
+       each notification delivered over this channel. *)
+
+  ?expiration: float option;
+     (* Unix timestamp in milliseconds.
+        Date and time of notification channel expiration,
+        expressed as a Unix timestamp, in milliseconds. *)
+}
+
+(* https://www.googleapis.com/calendar/v3/channels/stop *)
+type unwatch_request = {
+  id: string;
+    (* A UUID or similar unique string that identifies this channel. *)
+
+  resourceId: string;
+    (* An opaque ID that identifies the resource being watched
+       on this channel. Stable across different API versions. *)
+
+  ?token: string option;
+    (* An arbitrary string delivered to the target address
+       with each notification delivered over this channel. *)
+    (* TODO: please explain if you understand how this field is not useless *)
+}
+
+type resource_state = [
+  | Sync <json name="sync">
+  | Exists <json name="exists">
+  | Not_exists <json name="not_exists">
+]
+
+(* Those are derived from HTTP request headers, not from a JSON body. *)
+type notification = {
+  channel_id: string;
+    (* UUID or other unique string you provided to identify
+       this notification channel. *)
+
+  message_number: int;
+    (* Integer that identifies this message for this notification channel.
+       Value is always 1 for sync messages. Message numbers increase
+       for each subsequent message on the channel, but they are
+       not sequential. *)
+
+  resource_id: string;
+    (* An opaque value that identifies the watched resource.
+       This ID is stable across API versions.
+       e.g. the event ID. *)
+
+  resource_state: resource_state;
+    (* The new resource state, which triggered the notification.
+       Possible values: sync, exists, or not_exists. *)
+
+  ?resource_uri: string option;
+    (* An API-version-specific identifier for the watched resource.
+       Sometimes present *)
+
+  ?channel_expiration: string option;
+    (* Date and time of notification channel expiration,
+       expressed in human-readable format. Only present if defined. *)
+
+  ?channel_token: string option;
+    (* Notification channel token that was set by your application,
+       and that you can use to verify the source of notification.
+       Only present if defined. *)
+}
+
+type hex_color = string (* #0a1b2c *)
+
+type color = {
+  color_key : string;
+    (* Identifies this event color definition for use in calendar or event
+       'color' fields. Projected into this object by our code, since Google
+       supplies it in an awkward way. *)
+
+  background : hex_color;
+    (* The background color associated with this color definition. *)
+
+  foreground : hex_color;
+    (* The foreground color that can be used to write on top of a background
+       with 'background' color. *)
+}
+
+type colors_response = {
+  kind : string;
+    (* Type of the resource ("calendar#colors"). *)
+
+  ?updated : timestamp option;
+    (* Last modification time of the color palette (as a RFC 3339 timestamp).
+       Read-only. *)
+
+  ~calendar : color list;
+    (* Palette of calendar colors, mapping from the color ID to its definition.
+       A calendarListEntry resource refers to one of these color IDs in its
+       color field. Read-only. *)
+
+  ~event : color list;
+    (* Palette of event colors, mapping from the color ID to its definition. An
+       event resource may refer to one of these color IDs in its color field.
+       Read-only. *)
+} <ocaml field_prefix="col_">
