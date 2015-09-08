@@ -1,5 +1,5 @@
 (* Google calendar events manipulation *)
-open Gcal_t
+open Gcal_api_t
 
 (* Compare events by their start time. Events with start time
    corresponding to a None option are considered as all day events

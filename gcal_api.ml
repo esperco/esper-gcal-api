@@ -2,7 +2,7 @@ open Printf
 open Lwt
 open Log
 open Util_url.Op
-open Gcal_t
+open Gcal_api_t
 
 module Http = Util_http_client.Wrap (Util_http_client.Original) (struct
   type orig_result = Util_http_client.response
@@ -20,9 +20,9 @@ let (+/-) base interval =
 let url_encode s = Util_url.encode s
 
 let handle_error body loc =
-  let open Gcal_t in
+  let open Gcal_api_t in
   let {error = {code; message}} =
-    Gcal_j.error_response_of_string body in
+    Gcal_api_j.error_response_of_string body in
   Http_exn.internal_error (Printf.sprintf "%d %s; %s"
                              code message loc)
 
@@ -48,7 +48,7 @@ let try_calendar_list
     ?minAccessRole ?maxResults ?pageToken
     ?showHidden access_token =
   let string_of_access_role x =
-    unquote (Gcal_j.string_of_access_role x) in
+    unquote (Gcal_api_j.string_of_access_role x) in
   let string x = x in
   let query = ("maxResults",    string_of_int,         maxResults)
           @^@ ("minAccessRole", string_of_access_role, minAccessRole)
@@ -63,7 +63,7 @@ let try_calendar_list
   Http.get ~headers:[Google_auth.auth_header access_token] uri
   >>= function
     | `OK, _headers, body ->
-        let result = Gcal_j.calendar_list_response_of_string body in
+        let result = Gcal_api_j.calendar_list_response_of_string body in
         return (`Result (Some result))
     | `Not_found, _, _ ->
         return (`Result None)
@@ -157,7 +157,7 @@ let try_calendar_list_get calendar_id access_token =
   Http.get ~headers:[Google_auth.auth_header access_token] uri
   >>= function
     | `OK, _headers, body ->
-        let result = Gcal_j.calendar_list_item_of_string body in
+        let result = Gcal_api_j.calendar_list_item_of_string body in
         return (`Result (Some result))
     | `Not_found, _, _ ->
         return (`Result None)
@@ -180,8 +180,8 @@ let calendar_list_get calendar_id uid =
   Cache.fetch
     ~exptime:(600 +/- 60)
     cache_key
-    (fun x -> Some (Gcal_j.calendar_list_item_of_string x))
-    (BatOption.map Gcal_j.string_of_calendar_list_item)
+    (fun x -> Some (Gcal_api_j.calendar_list_item_of_string x))
+    (BatOption.map Gcal_api_j.string_of_calendar_list_item)
     http_call
 
 let try_update_calendar_list_item ?colorRgbFormat access_token uid calid edit =
@@ -196,10 +196,10 @@ let try_update_calendar_list_item ?colorRgbFormat access_token uid calid edit =
     ("Content-Type", "application/json")
   in
   let headers = [Google_auth.auth_header access_token; content_type] in
-  let body = Gcal_j.string_of_calendar_list_item_edit edit in
+  let body = Gcal_api_j.string_of_calendar_list_item_edit edit in
   Http.patch ~headers ~body uri >>= function
   | `OK, _headers, body ->
-      let result = Gcal_j.calendar_list_item_of_string body in
+      let result = Gcal_api_j.calendar_list_item_of_string body in
       let cache_key =
         Cache.make_key
           "calendar_list_item"
@@ -227,9 +227,9 @@ let try_freebusy
     timeMin timeMax ?timeZone
     ?groupExpansionMax ?calendarExpansionMax
     calendar_ids access_token =
-  let bzq_items = List.map (fun id -> {Gcal_t.cid_id = id})
+  let bzq_items = List.map (fun id -> {Gcal_api_t.cid_id = id})
                     calendar_ids in
-  let q = {Gcal_t.bzq_timeMin = timeMin; bzq_timeMax = timeMax;
+  let q = {Gcal_api_t.bzq_timeMin = timeMin; bzq_timeMax = timeMax;
            bzq_timeZone = timeZone;
            bzq_groupExpansionMax = groupExpansionMax;
            bzq_calendarExpansionMax = calendarExpansionMax;
@@ -238,11 +238,11 @@ let try_freebusy
                  "Content-Type", "application/json"] in
   let url = Google_api_util.make_uri ~path: "/calendar/v3/freeBusy" () in
   Http.post ~headers
-    ~body:(Gcal_j.string_of_freebusy_request q)
+    ~body:(Gcal_api_j.string_of_freebusy_request q)
     url
   >>= function
     | `OK, _headers, body ->
-        let result = Gcal_j.freebusy_response_of_string body in
+        let result = Gcal_api_j.freebusy_response_of_string body in
         return (`Result (Some result))
     | `Not_found, _, _ ->
         return (`Result None)
@@ -302,7 +302,7 @@ let try_events_list
     uid calendar_id access_token =
 
   let string_of_order_by x =
-    unquote (Gcal_j.string_of_event_order_by x) in
+    unquote (Gcal_api_j.string_of_event_order_by x) in
   let string x = x in
   let query = ("alwaysIncludeEmail",    string_of_bool, alwaysIncludeEmail)
           @^@ ("iCalUID",               string,         iCalUID)
@@ -331,11 +331,11 @@ let try_events_list
   Http.get ~headers:[Google_auth.auth_header access_token] uri
   >>= function
     | `OK, _headers, body ->
-        let result = Gcal_j.events_list_response_of_string body in
+        let result = Gcal_api_j.events_list_response_of_string body in
         Util_conc.iter result.evs_items (fun event ->
           let cache_key = make_event_key calendar_id event.ev_id in
           Cache.store ~exptime:(60 +/- 30) cache_key
-            (Gcal_j.string_of_event event)
+            (Gcal_api_j.string_of_event event)
         ) >>= fun () ->
         return (`Result (`OK result))
     | `Not_found, _, _ ->
@@ -399,7 +399,7 @@ let events_list
 type events_list_unpaged_result = [
   | `OK of (string (* timezone *)
             * Gcalid.t
-            * Gcal_t.event list
+            * Gcal_api_t.event list
             * string option (* next sync token *))
   | `Not_found
   | `Gone
@@ -506,7 +506,7 @@ let try_get_calendar_metadata ~calendar_id access_token =
   Http.get ~headers:[Google_auth.auth_header access_token] uri
   >>= function
   | `OK, _headers, body ->
-      let x = Gcal_j.calendar_metadata_of_string body in
+      let x = Gcal_api_j.calendar_metadata_of_string body in
       return (`Result (Some x))
   | `Not_found, _, _ ->
       return (`Result None)
@@ -529,8 +529,8 @@ let get_calendar_metadata ~calendar_id uid =
   Cache.fetch
     ~exptime:(600 +/- 60)
     cache_key
-    (fun x -> Some (Gcal_j.calendar_metadata_of_string x))
-    (BatOption.map Gcal_j.string_of_calendar_metadata)
+    (fun x -> Some (Gcal_api_j.calendar_metadata_of_string x))
+    (BatOption.map Gcal_api_j.string_of_calendar_metadata)
     http_call
 
 let try_get_event
@@ -554,7 +554,7 @@ let try_get_event
   Http.get ~headers:[Google_auth.auth_header access_token] uri
   >>= function
   | `OK, _headers, body ->
-      return (`Result (Some (Gcal_j.event_of_string body)))
+      return (`Result (Some (Gcal_api_j.event_of_string body)))
   | `Not_found, _, _ ->
       return (`Result None)
   | x ->
@@ -617,7 +617,7 @@ let try_insert_empty_event
   Http.post ~headers:[Google_auth.auth_header access_token] uri
   >>= function
   | `OK, _headers, body ->
-      let result = Gcal_j.event_of_string body in
+      let result = Gcal_api_j.event_of_string body in
       let cache_key = make_event_key calendar_id result.ev_id in
       Cache.store cache_key ~exptime:(30 +/- 10) body >>= fun () ->
       return (`Result (Some result))
@@ -653,7 +653,7 @@ let try_move_event
   Http.post ~headers:[Google_auth.auth_header access_token] uri
   >>= function
   | `OK, _headers, body ->
-      let result = Gcal_j.event_of_string body in
+      let result = Gcal_api_j.event_of_string body in
       let cache_key = make_event_key calendar_id result.ev_id in
       Cache.store cache_key ~exptime:(30 +/- 10) body >>= fun () ->
       return (`Result (Some result))
@@ -690,10 +690,10 @@ let try_insert_event
   in
   let headers = [Google_auth.auth_header access_token;
                  "Content-Type", "application/json"] in
-  let body = Gcal_j.string_of_event_edit event in
+  let body = Gcal_api_j.string_of_event_edit event in
   Http.post ~headers ~body uri >>= function
   | `OK, _headers, body ->
-      let result = Gcal_j.event_of_string body in
+      let result = Gcal_api_j.event_of_string body in
       let cache_key = make_event_key calendar_id result.ev_id in
       Cache.store cache_key ~exptime:(30 +/- 10) body >>= fun () ->
       return (`Result (Some result))
@@ -715,8 +715,8 @@ let insert_event
   )
 
 let event_edit_of_event event =
-  let s = Gcal_j.string_of_event event in
-  try Some (Gcal_j.event_edit_of_string s)
+  let s = Gcal_api_j.string_of_event event in
+  try Some (Gcal_api_j.event_edit_of_string s)
   with _ ->
     logf `Info "Google calendar event %s was canceled"
       (Geventid.to_string event.ev_id);
@@ -739,10 +739,10 @@ let try_update_event
   in
   let headers = [Google_auth.auth_header access_token;
                  "Content-Type", "application/json"] in
-  let body = Gcal_j.string_of_event_edit event in
+  let body = Gcal_api_j.string_of_event_edit event in
   Http.put ~headers ~body uri >>= function
   | `OK, _headers, body ->
-      let result = Gcal_j.event_of_string body in
+      let result = Gcal_api_j.event_of_string body in
       let cache_key = make_event_key calendar_id result.ev_id in
       Cache.store cache_key ~exptime:(30 +/- 10) body >>= fun () ->
       return (`Result (Some result))
@@ -777,13 +777,13 @@ let try_insert_calendar ~summary ?timeZone uid access_token =
   let headers = [Google_auth.auth_header access_token;
                  "Content-Type", "application/json"] in
   let create = {
-    Gcal_t.cc_summary = summary;
+    Gcal_api_t.cc_summary = summary;
     cc_timeZone = timeZone;
   } in
-  let body = Gcal_j.string_of_calendar_list_item_create create in
+  let body = Gcal_api_j.string_of_calendar_list_item_create create in
   Http.post ~headers ~body uri >>= function
   | `OK, _headers, body ->
-      let result = Gcal_j.calendar_list_item_of_string body in
+      let result = Gcal_api_j.calendar_list_item_of_string body in
       let cache_key =
         Cache.make_key
           "calendar_list_item"
@@ -817,7 +817,7 @@ let try_list_acl_rules ~calendar_id access_token =
                  "Content-Type", "application/json"] in
   Http.get ~headers uri >>= function
   | `OK, _headers, body ->
-      return (`Result (Some (Gcal_j.acl_list_response_of_string body)))
+      return (`Result (Some (Gcal_api_j.acl_list_response_of_string body)))
   | `Not_found, _, _ ->
       return (`Result None)
   | x ->
@@ -839,8 +839,8 @@ let list_acl_rules ~calendar_id (request_id, google_request) =
   Cache.fetch
     ~exptime:(600 +/- 60)
     cache_key
-    (fun x -> Some (Gcal_j.acl_list_response_of_string x))
-    (BatOption.map Gcal_j.string_of_acl_list_response)
+    (fun x -> Some (Gcal_api_j.acl_list_response_of_string x))
+    (BatOption.map Gcal_api_j.string_of_acl_list_response)
     http_call
 
 let list_acl_rules_for_user ~calendar_id uid =
@@ -860,13 +860,13 @@ let try_insert_acl_rule ~calendar_id ~request_id level share_with_email
   let headers = [Google_auth.auth_header access_token;
                  "Content-Type", "application/json"] in
   let create = {
-    Gcal_t.new_acl_role = level;
+    Gcal_api_t.new_acl_role = level;
     new_acl_scope = {
-      Gcal_t.sco_type_ = `User;
+      Gcal_api_t.sco_type_ = `User;
       sco_value = Some (Email.to_string share_with_email)
     }
   } in
-  let body = Gcal_j.string_of_new_acl_rule create in
+  let body = Gcal_api_j.string_of_new_acl_rule create in
   Http.post ~headers ~body uri >>= function
   | `OK, _headers, body ->
       let cache_key =
@@ -875,7 +875,7 @@ let try_insert_acl_rule ~calendar_id ~request_id level share_with_email
           (request_id ^ "," ^ Gcalid.to_string calendar_id)
       in
       Cache.delete cache_key >>= fun _ ->
-      return (`Result (Gcal_j.acl_rule_of_string body))
+      return (`Result (Gcal_api_j.acl_rule_of_string body))
   | x ->
       handle_error_status "insert_acl_rule" x
 
@@ -897,8 +897,8 @@ let try_update_acl_rule ~calendar_id ~request_id rule_id level access_token =
   in
   let headers = [Google_auth.auth_header access_token;
                  "Content-Type", "application/json"] in
-  let edit = { Gcal_t.edit_acl_role = level } in
-  let body = Gcal_j.string_of_edit_acl_rule edit in
+  let edit = { Gcal_api_t.edit_acl_role = level } in
+  let body = Gcal_api_j.string_of_edit_acl_rule edit in
   Http.put ~headers ~body uri >>= function
   | `OK, _headers, body ->
       let cache_key =
@@ -907,7 +907,7 @@ let try_update_acl_rule ~calendar_id ~request_id rule_id level access_token =
           (request_id ^ "," ^ Gcalid.to_string calendar_id)
       in
       Cache.delete cache_key >>= fun _ ->
-      return (`Result (Gcal_j.acl_rule_of_string body))
+      return (`Result (Gcal_api_j.acl_rule_of_string body))
   | x ->
       handle_error_status "update_acl_rule" x
 
@@ -988,7 +988,7 @@ let find_event uid eventid calendars =
     >>= function
     | None -> return None
     | Some e ->
-        match e.Gcal_t.ev_status with
+        match e.Gcal_api_t.ev_status with
         | `Cancelled -> return None
         | _ -> return (Some (e, cal.Api_t.cal_google_cal_id))
   )
@@ -999,10 +999,10 @@ let get_event_start_time uid calendars eventid =
   match event with
   | None -> return None
   | Some (e, _) ->
-      match e.Gcal_j.ev_start with
+      match e.Gcal_api_j.ev_start with
       | None -> return None
       | Some event_time ->
-          match event_time.Gcal_j.dateTime with
+          match event_time.Gcal_api_j.dateTime with
           | None -> return None
           | Some t -> return (Some (eventid, t))
 
@@ -1033,10 +1033,10 @@ let try_watch_events
     params = Some { ttl = ttl_seconds };
   } in
   Http.post ~headers
-    ~body:(Gcal_j.string_of_watch_events_request request)
+    ~body:(Gcal_api_j.string_of_watch_events_request request)
     url >>= function
   | `OK, _headers, body ->
-      return (`Result (Gcal_j.watch_events_response_of_string body))
+      return (`Result (Gcal_api_j.watch_events_response_of_string body))
   | x ->
       handle_error_status "watch_events" x
 
@@ -1073,7 +1073,7 @@ let try_unwatch ~channel_id ~resource_id ?channel_token access_token =
     token = channel_token;
   } in
   Http.post ~headers
-    ~body:(Gcal_j.string_of_unwatch_request request)
+    ~body:(Gcal_api_j.string_of_unwatch_request request)
     url >>= function
   | (`No_content | `OK), _headers, body ->
       return (`Result ())
@@ -1124,7 +1124,7 @@ let parse_notification
 let inject_keys colors =
   let open Yojson.Basic.Util in
   List.map (fun (key, color) ->
-    Gcal_v.create_color
+    Gcal_api_v.create_color
       ~color_key:key
       ~background:(color |> member "background" |> to_string)
       ~foreground:(color |> member "foreground" |> to_string)
@@ -1140,7 +1140,7 @@ let inject_keys_into_color json =
   let updated = json |> member "updated" |> to_string_option in
   let calendar = json |> member "calendar" |> to_assoc in
   let event = json |> member "event" |> to_assoc in
-  Gcal_v.create_colors_response
+  Gcal_api_v.create_colors_response
     ~col_kind
     ?col_updated:(BatOption.map Util_time.of_string updated)
     ~col_calendar:(inject_keys calendar)
@@ -1168,8 +1168,8 @@ let get_colors uid =
   Cache.fetch
     ~exptime:(600 +/- 60)
     cache_key
-    Gcal_j.colors_response_of_string
-    (fun x -> Some (Gcal_j.string_of_colors_response x))
+    Gcal_api_j.colors_response_of_string
+    (fun x -> Some (Gcal_api_j.string_of_colors_response x))
     http_call
 
 (* tests from toplevel
@@ -1188,7 +1188,7 @@ let test_calendar_list email password = test email password (fun token ->
 let t1 = Util_time.of_string "2013-10-01T00:00:00"
 let t2 = Util_time.of_string "2013-12-01T00:00:00"
 let test_freebusy email password = test email password (fun token ->
-  let open Gcal_t in
+  let open Gcal_api_t in
   Gcal.calendar_list token () >>= fun {cl_items} ->
   let ids = List.map (fun {ci_id} -> ci_id) cl_items in
   Gcal.freebusy token t1 t2 ids)
@@ -1212,13 +1212,13 @@ let test_move_event email password event_id destination = test email password
                   ~calendar_id:email ~event_id ~destination ())
 
 let event_time time = {
-  Gcal_t.dateTime = Some time;
+  Gcal_api_t.dateTime = Some time;
   date = None;
   timeZone = None;
 }
 
 let test_event = {
-  Gcal_t.ew_status = `Tentative;
+  Gcal_api_t.ew_status = `Tentative;
   ew_summary = "quite a test";
   ew_description = None;
   ew_location = None;
@@ -1237,13 +1237,13 @@ let test_event = {
   ew_anyoneCanAddSelf = true;
   ew_guestsCanInviteOthers = true;
   ew_guestsCanSeeOtherGuests = true;
-  ew_reminders = {Gcal_t.reminder_useDefault = true;
+  ew_reminders = {Gcal_api_t.reminder_useDefault = true;
                                     reminder_overrides = []};
   ew_source = None;
 }
 
 let test_event2 =
-  {test_event with Gcal_t.ew_summary = "lalala"}
+  {test_event with Gcal_api_t.ew_summary = "lalala"}
 
 let test_insert_event email password = test email password (fun token ->
   Gcal.insert_event token ~calendar_id:email test_event)

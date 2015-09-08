@@ -1,13 +1,13 @@
 OCAML_LIBS = $(OCAML_LIBS_gcal-api)
 
 FILES[] =
-  gcal_t
-  gcal_j
-  gcal_v
+  gcal_api_t
+  gcal_api_j
+  gcal_api_v
   gcal_api
   gcal_event
 
-Atdgen(gcal, -j-std)
+Atdgen(gcal_api, -j-std)
 OCamlLibrary(gcal-api, $(FILES))
 Meta(gcal-api)
 
