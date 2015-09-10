@@ -64,9 +64,9 @@ type cached_calendar_list = {
 type access_role = [
   None           <json name="none">
 | FreeBusyReader <json name="freeBusyReader">
-| Owner          <json name="owner">
 | Reader         <json name="reader">
 | Writer         <json name="writer">
+| Owner          <json name="owner">
 ]
 
 type reminder = {

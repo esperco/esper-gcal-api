@@ -44,6 +44,17 @@ let unquote s =
   | `String s -> s
   | _ -> assert false
 
+let int_of_access_role (x: access_role) =
+  match x with
+  | `None -> 0
+  | `FreeBusyReader -> 1
+  | `Reader -> 2
+  | `Writer -> 3
+  | `Owner -> 4
+
+let compare_access_role a b =
+  compare (int_of_access_role a) (int_of_access_role b)
+
 let try_calendar_list
     ?minAccessRole ?maxResults ?pageToken
     ?showHidden access_token =
