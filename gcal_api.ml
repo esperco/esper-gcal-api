@@ -1024,7 +1024,7 @@ let try_watch_events
   in
   let headers = [Google_auth.auth_header access_token;
                  "Content-Type", "application/json"] in
-  let request: watch_events_request = {
+  let request: watch_request = {
     id = channel_id;
     token = channel_token;
     type_ = `Web_hook;
@@ -1033,10 +1033,10 @@ let try_watch_events
     params = Some { ttl = ttl_seconds };
   } in
   Http.post ~headers
-    ~body:(Gcal_api_j.string_of_watch_events_request request)
+    ~body:(Gcal_api_j.string_of_watch_request request)
     url >>= function
   | `OK, _headers, body ->
-      return (`Result (Gcal_api_j.watch_events_response_of_string body))
+      return (`Result (Gcal_api_j.watch_response_of_string body))
   | x ->
       handle_error_status "watch_events" x
 
@@ -1051,6 +1051,52 @@ let watch_events
     User_account.google_request uid (fun access_token ->
       try_watch_events
         ~calendar_id
+        ~channel_id
+        ~receiving_url
+        ?channel_token
+        ?ttl_seconds
+        access_token
+    )
+  )
+
+let try_watch_calendar_list
+    ~channel_id
+    ~receiving_url
+    ?channel_token
+    ?ttl_seconds
+    access_token =
+  let url =
+    Google_api_util.make_uri
+      ~path:("/calendar/v3/users/me/calendarList/watch")
+      ()
+  in
+  let headers = [Google_auth.auth_header access_token;
+                 "Content-Type", "application/json"] in
+  let request: watch_request = {
+    id = channel_id;
+    token = channel_token;
+    type_ = `Web_hook;
+    address = receiving_url;
+    expiration = None;
+    params = Some { ttl = ttl_seconds };
+  } in
+  Http.post ~headers
+    ~body:(Gcal_api_j.string_of_watch_request request)
+    url >>= function
+  | `OK, _headers, body ->
+      return (`Result (Gcal_api_j.watch_response_of_string body))
+  | x ->
+      handle_error_status "watch_calendar_list" x
+
+let watch_calendar_list
+    ~channel_id
+    ~receiving_url
+    ?channel_token
+    ?ttl_seconds
+    uid =
+  Cloudwatch.time "google.api.calendar.watch_calendar_list" (fun () ->
+    User_account.google_request uid (fun access_token ->
+      try_watch_calendar_list
         ~channel_id
         ~receiving_url
         ?channel_token

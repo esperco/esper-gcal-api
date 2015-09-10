@@ -373,8 +373,12 @@ type watch_events_request_params = {
        Note that the documentation says 'string' but it's a JSON number. *)
 }
 
-(* https://developers.google.com/google-apps/calendar/v3/push#registering *)
-type watch_events_request = {
+(*
+   https://developers.google.com/google-apps/calendar/v3/push#registering
+
+   Works for event watchers and calendar list watchers.
+*)
+type watch_request = {
   id: string;
     (* A UUID or similar unique string that identifies this channel. *)
 
@@ -399,7 +403,7 @@ type watch_events_request = {
 
 type api_channel = [ Api_channel <json name="api#channel"> ]
 
-type watch_events_response = {
+type watch_response = {
   kind: api_channel;
     (* Identifies this as a notification channel used to watch
        for changes to a resource. Value: the fixed string "api#channel". *)
