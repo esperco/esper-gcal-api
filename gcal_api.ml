@@ -157,7 +157,7 @@ let calendar_list_unpaged_for_team
   calendar_list_unpaged'
     ?minAccessRole
     ?showHidden
-    (User_team.Team_other_google_token.request (teamid, email))
+    (User_team.google_request (teamid, email))
 
 let try_calendar_list_get calendar_id access_token =
   let uri =
@@ -966,7 +966,7 @@ let google_request_for_authorized = function
       User_account.google_request uid
   | `Other {Api_t.for_teamid; for_account} ->
       Email.to_string for_account,
-      User_team.Team_other_google_token.request (for_teamid, for_account)
+      User_team.google_request (for_teamid, for_account)
 
 let share_calendar ~calendar_id authorized emails =
   let request = google_request_for_authorized authorized in
