@@ -83,9 +83,9 @@ let try_calendar_list
 
 let calendar_list
     ?minAccessRole ?maxResults ?pageToken ?showHidden
-    google_request =
+    with_token =
   Cloudwatch.time "google.api.calendar.calendar_list" (fun () ->
-    google_request (fun token ->
+    with_token (fun token ->
       try_calendar_list ?minAccessRole ?maxResults ?pageToken ?showHidden token
     )
   )
@@ -98,11 +98,11 @@ let calendar_list
      to return, not a page size;
    - pageToken, which is not available here.
 *)
-let calendar_list_unpaged'
+let calendar_list_unpaged
   ?minAccessRole
   ?maxResults (* maximum number of results to return, in total *)
   ?showHidden
-  google_request =
+  with_token =
 
   let rec loop acc max_remaining page_token =
     let maxResults =
@@ -115,7 +115,7 @@ let calendar_list_unpaged'
       ~maxResults
       ?pageToken:page_token
       ?showHidden
-      google_request
+      with_token
     >>= function
     | None ->
         return None
@@ -137,28 +137,6 @@ let calendar_list_unpaged'
   in
   loop [] maxResults None
 
-let calendar_list_unpaged
-  ?minAccessRole
-  ?maxResults (* maximum number of results to return, in total *)
-  ?showHidden
-  uid
-=
-  calendar_list_unpaged'
-    ?minAccessRole
-    ?showHidden
-    (User_account.google_request uid)
-
-let calendar_list_unpaged_for_team
-  ?minAccessRole
-  ?maxResults (* maximum number of results to return, in total *)
-  ?showHidden
-  teamid email
-=
-  calendar_list_unpaged'
-    ?minAccessRole
-    ?showHidden
-    (User_team.google_request (teamid, email))
-
 let try_calendar_list_get calendar_id access_token =
   let uri =
     Google_api_util.make_uri
@@ -175,10 +153,10 @@ let try_calendar_list_get calendar_id access_token =
     | x ->
         handle_error_status "calendar_list_get" x
 
-let calendar_list_get calendar_id uid =
+let calendar_list_get calendar_id with_token =
   let http_call () =
     Cloudwatch.time "google.api.calendar.calendar_list_get" (fun () ->
-      User_account.google_request uid (fun token ->
+      with_token (fun token ->
         try_calendar_list_get calendar_id token
       )
     )
@@ -195,7 +173,7 @@ let calendar_list_get calendar_id uid =
     (BatOption.map Gcal_api_j.string_of_calendar_list_item)
     http_call
 
-let try_update_calendar_list_item ?colorRgbFormat access_token uid calid edit =
+let try_update_calendar_list_item ?colorRgbFormat access_token edit =
   let query = ("colorRgbFormat", string_of_bool, colorRgbFormat) @^@ [] in
   let uri =
     Google_api_util.make_uri
@@ -211,25 +189,15 @@ let try_update_calendar_list_item ?colorRgbFormat access_token uid calid edit =
   Http.patch ~headers ~body uri >>= function
   | `OK, _headers, body ->
       let result = Gcal_api_j.calendar_list_item_of_string body in
-      let cache_key =
-        Cache.make_key
-          "calendar_list_item"
-          (Uid.to_string uid ^ "," ^ Gcalid.to_string calid)
-      in
-      Cache.store cache_key ~exptime:(600 +/- 60) body >>= fun () ->
-      let list_cache_key =
-        Cache.make_key "calendar_list" (Uid.to_string uid)
-      in
-      Cache.delete list_cache_key >>= fun _ ->
       return (`Result (Some result))
   | `Not_found, _, _ ->
       return (`Result None)
   | x ->
       handle_error_status "update_calendar_list_item" x
 
-let update_calendar_list_item ?colorRgbFormat calid edit uid =
+let update_calendar_list_item ?colorRgbFormat calid edit with_token =
   Cloudwatch.time "google.api.calendar.update_calendar_list_item" (fun () ->
-    User_account.google_request uid (fun token ->
+    with_token (fun token ->
       try_update_calendar_list_item ?colorRgbFormat token uid calid edit
     )
   )
@@ -264,9 +232,9 @@ let freebusy
     timeMin timeMax ?timeZone
     ?groupExpansionMax ?calendarExpansionMax
     calendar_ids
-    uid =
+    with_token =
   Cloudwatch.time "google.api.calendar.freebusy" (fun () ->
-    User_account.google_request uid (fun token ->
+    with_token (fun token ->
       try_freebusy timeMin timeMax ?timeZone
         ?groupExpansionMax ?calendarExpansionMax
         calendar_ids
@@ -381,11 +349,11 @@ let events_list
     ?timeMin
     ?timeZone
     ?updatedMin
-    calendar_id uid
+    calendar_id with_token
   : events_list_result Lwt.t =
 
   Cloudwatch.time "google.api.calendar.events_list" (fun () ->
-    User_account.google_request uid (fun token ->
+    with_token (fun token ->
       try_events_list
         ?alwaysIncludeEmail
         ?iCalUID
@@ -524,10 +492,10 @@ let try_get_calendar_metadata ~calendar_id access_token =
   | x ->
       handle_error_status "get_calendar_metadata" x
 
-let get_calendar_metadata ~calendar_id uid =
+let get_calendar_metadata ~calendar_id with_token =
   let http_call () =
     Cloudwatch.time "google.api.calendar.get_calendar_metadata" (fun () ->
-      User_account.google_request uid (fun token ->
+      with_token (fun token ->
         try_get_calendar_metadata ~calendar_id token
       )
     )
@@ -574,9 +542,9 @@ let try_get_event
 let get_event
     ~calendar_id ~event_id
     ?alwaysIncludeEmail ?maxAttendees ?sanitizeHtml ?timeZone
-    uid =
+    with_token =
   Cloudwatch.time "google.api.calendar.get_event" (fun () ->
-    User_account.google_request uid (fun token ->
+    with_token (fun token ->
       try_get_event
         ~calendar_id ~event_id
         ?alwaysIncludeEmail ?maxAttendees ?sanitizeHtml ?timeZone
@@ -604,9 +572,9 @@ let try_delete_event ~calendar_id ~event_id ?sendNotifications uid token =
   | x ->
       handle_error_status "delete_event" x
 
-let delete_event ~calendar_id ~event_id ?sendNotifications uid =
+let delete_event ~calendar_id ~event_id ?sendNotifications with_token =
   Cloudwatch.time "google.api.calendar.delete_event" (fun () ->
-    User_account.google_request uid (fun token ->
+    with_token (fun token ->
       try_delete_event ~calendar_id ~event_id ?sendNotifications uid token
     )
   )
@@ -639,9 +607,9 @@ let try_insert_empty_event
 
 let insert_empty_event
     ?sanitizeHtml ?sendNotifications
-    ~calendar_id text uid =
+    ~calendar_id text with_token =
   Cloudwatch.time "google.api.calendar.insert_empty_event" (fun () ->
-    User_account.google_request uid (fun token ->
+    with_token (fun token ->
       try_insert_empty_event
         ?sanitizeHtml ?sendNotifications
         ~calendar_id uid text token
@@ -675,9 +643,9 @@ let try_move_event
 
 let move_event
     ~calendar_id ~destination ~event_id
-    ?sendNotifications uid =
+    ?sendNotifications with_token =
   Cloudwatch.time "google.api.calendar.move_event" (fun () ->
-    User_account.google_request uid (fun token ->
+    with_token (fun token ->
       try_move_event
         ~calendar_id ~destination ~event_id
         ?sendNotifications uid token
@@ -716,9 +684,9 @@ let try_insert_event
 
 let insert_event
   ~calendar_id ?maxAttendees ?sanitizeHtml
-  ?sendNotifications event uid =
+  ?sendNotifications event with_token =
   Cloudwatch.time "google.api.calendar.insert_event" (fun () ->
-    User_account.google_request uid (fun token ->
+    with_token (fun token ->
       try_insert_event
         ~calendar_id ?maxAttendees ?sanitizeHtml
         ?sendNotifications uid event token
@@ -769,9 +737,9 @@ let try_update_event
 
 let update_event
     ~calendar_id ~event_id ?alwaysIncludeEmail
-    ?maxAttendees ?sanitizeHtml ?sendNotifications event uid =
+    ?maxAttendees ?sanitizeHtml ?sendNotifications event with_token =
   Cloudwatch.time "google.api.calendar.update_event" (fun () ->
-    User_account.google_request uid (fun token ->
+    with_token (fun token ->
       try_update_event
         ~calendar_id ~event_id ?alwaysIncludeEmail
         ?maxAttendees ?sanitizeHtml ?sendNotifications uid event token
@@ -809,9 +777,9 @@ let try_insert_calendar ~summary ?timeZone uid access_token =
   | x ->
       handle_error_status "insert_calendar" x
 
-let insert_calendar ~summary ?timeZone uid =
+let insert_calendar ~summary ?timeZone with_token =
   Cloudwatch.time "google.api.calendar.insert_calendar" (fun () ->
-    User_account.google_request uid
+    with_token
       (fun token -> try_insert_calendar ~summary ?timeZone uid token)
   )
 
@@ -834,33 +802,15 @@ let try_list_acl_rules ~calendar_id access_token =
   | x ->
       handle_error_status "list_acl_rules" x
 
-let list_acl_rules ~calendar_id (request_id, google_request) =
-  let http_call () =
-    Cloudwatch.time "google.api.calendar.list_acl_rules" (fun () ->
-      google_request (fun token ->
-        try_list_acl_rules ~calendar_id token
-      )
+let list_acl_rules ~calendar_id with_token =
+  Cloudwatch.time "google.api.calendar.list_acl_rules" (fun () ->
+    with_token (fun token ->
+      try_list_acl_rules ~calendar_id token
     )
-  in
-  let cache_key =
-    Cache.make_key
-      "acl"
-      (request_id ^ "," ^ Gcalid.to_string calendar_id)
-  in
-  Cache.fetch
-    ~exptime:(600 +/- 60)
-    cache_key
-    (fun x -> Some (Gcal_api_j.acl_list_response_of_string x))
-    (BatOption.map Gcal_api_j.string_of_acl_list_response)
-    http_call
-
-let list_acl_rules_for_user ~calendar_id uid =
-  list_acl_rules ~calendar_id
-    (Uid.to_string uid, User_account.google_request uid)
+  )
 
 (* Insert a new access control list entry for a calendar *)
-let try_insert_acl_rule ~calendar_id ~request_id level share_with_email
-                        access_token =
+let try_insert_acl_rule ~calendar_id level share_with_email access_token =
   let uri =
     Google_api_util.make_uri
       ~path:("/calendar/v3/calendars/"
@@ -880,20 +830,13 @@ let try_insert_acl_rule ~calendar_id ~request_id level share_with_email
   let body = Gcal_api_j.string_of_new_acl_rule create in
   Http.post ~headers ~body uri >>= function
   | `OK, _headers, body ->
-      let cache_key =
-        Cache.make_key
-          "acl"
-          (request_id ^ "," ^ Gcalid.to_string calendar_id)
-      in
-      Cache.delete cache_key >>= fun _ ->
       return (`Result (Gcal_api_j.acl_rule_of_string body))
   | x ->
       handle_error_status "insert_acl_rule" x
 
-let insert_acl_rule ~calendar_id (request_id, google_request)
-                    level share_with_email =
+let insert_acl_rule ~calendar_id level share_with_email with_token =
   Cloudwatch.time "google.api.calendar.insert_acl_rule" (fun () ->
-    google_request (fun token ->
+    with_token (fun token ->
       try_insert_acl_rule ~calendar_id ~request_id level share_with_email token
     )
   )
@@ -912,19 +855,13 @@ let try_update_acl_rule ~calendar_id ~request_id rule_id level access_token =
   let body = Gcal_api_j.string_of_edit_acl_rule edit in
   Http.put ~headers ~body uri >>= function
   | `OK, _headers, body ->
-      let cache_key =
-        Cache.make_key
-          "acl"
-          (request_id ^ "," ^ Gcalid.to_string calendar_id)
-      in
-      Cache.delete cache_key >>= fun _ ->
       return (`Result (Gcal_api_j.acl_rule_of_string body))
   | x ->
       handle_error_status "update_acl_rule" x
 
-let update_acl_rule ~calendar_id (request_id, google_request) rule_id level =
+let update_acl_rule ~calendar_id rule_id level with_token =
   Cloudwatch.time "google.api.calendar.update_acl_rule" (fun () ->
-    google_request (fun token ->
+    with_token (fun token ->
       try_update_acl_rule ~calendar_id ~request_id rule_id level token
     )
   )
@@ -953,9 +890,9 @@ let try_delete_acl_rule ~calendar_id ~request_id rule_id access_token =
   | x ->
       handle_error_status "delete_acl_rule" x
 
-let delete_acl_rule ~calendar_id (request_id, google_request) rule_id =
+let delete_acl_rule ~calendar_id rule_id with_token =
   Cloudwatch.time "google.api.calendar.delete_acl_rule" (fun () ->
-    google_request (fun token ->
+    with_token (fun token ->
       try_delete_acl_rule ~calendar_id ~request_id rule_id token
     )
   )
