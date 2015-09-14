@@ -195,7 +195,7 @@ val update_acl_rule :
 val delete_acl_rule :
   calendar_id:Gcalid.t ->
   string ->
-  ((string -> request_id:'a -> http_response Lwt.t) ->
+  ((string -> http_response Lwt.t) ->
    (Cohttp.Code.status_code * 'b * string) Lwt.t) ->
   unit Lwt.t
 

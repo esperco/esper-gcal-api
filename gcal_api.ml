@@ -11,7 +11,7 @@ module Http = Util_http_client.Wrap (Util_http_client.Original) (struct
 end)
 
 type http_response = Util_http_client.response
-type with_token = ((string -> http_response Lwt.t) -> http_response Lwt.t)
+type with_token = (string -> http_response Lwt.t) -> http_response Lwt.t
 
 let http_fail call_name (status, headers, body) =
   Google_http.fail call_name status body
@@ -783,7 +783,7 @@ let update_acl_rule ~calendar_id rule_id level with_token =
   )
 
 (* Delete an access control list entry by its ID *)
-let call_delete_acl_rule ~calendar_id ~request_id rule_id access_token =
+let call_delete_acl_rule ~calendar_id rule_id access_token =
   let uri =
     Google_api_util.make_uri
       ~path:("/calendar/v3/calendars/"
