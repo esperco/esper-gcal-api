@@ -320,7 +320,7 @@ type calendar_metadata = {
   summary: string;
   ?description: string option;
   ?location: string option;
-  timeZone: string;
+  ?timeZone: string option;
 } <ocaml field_prefix="cal_">
 
 type acl_rule = {

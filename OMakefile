@@ -5,7 +5,7 @@ FILES[] =
   gcal_api_j
   gcal_api_v
   gcal_api
-  gcal_event
+  gcal_api_util
 
 Atdgen(gcal_api, -j-std)
 OCamlLibrary(gcal-api, $(FILES))
