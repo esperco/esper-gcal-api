@@ -212,7 +212,7 @@ val watch_events :
   ?channel_token:string ->
   ?ttl_seconds:float ->
   with_token ->
-  Gcal_api_j.watch_response Lwt.t
+  Gcal_api_j.watch_response option Lwt.t
 
 val watch_calendar_list :
   channel_id:string ->

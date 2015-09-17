@@ -878,7 +878,9 @@ let watch_events
         access_token
     ) >>= function
     | `OK, _headers, body ->
-        return (Gcal_api_j.watch_response_of_string body)
+        return (Some (Gcal_api_j.watch_response_of_string body))
+    | `Not_found, _, _ ->
+        return None
     | x ->
         http_fail "watch_events" x
   )
