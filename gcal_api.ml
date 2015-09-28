@@ -16,6 +16,13 @@ type with_token = (string -> http_response Lwt.t) -> http_response Lwt.t
 let http_fail call_name (status, headers, body) =
   Google_http.fail call_name status body
 
+let error_message_starts_with ~prefix json_body =
+  try
+    let error_resp = Gcal_api_j.error_response_of_string json_body in
+    BatString.starts_with error_resp.error.message prefix
+  with _ ->
+    false
+
 let url_encode s = Util_url.encode s
 
 let unquote s =
@@ -648,6 +655,9 @@ let call_update_event
   let body = Gcal_api_j.string_of_event_edit event in
   Http.put ~headers ~body uri
 
+type update_event_result =
+  [ `OK of event | `Not_found | `Invalid_sequence_value ]
+
 let update_event
     ~calendar_id ~event_id ?alwaysIncludeEmail
     ?maxAttendees ?sanitizeHtml ?sendNotifications event with_token =
@@ -659,14 +669,17 @@ let update_event
     ) >>= function
     | `OK, _headers, body ->
         let result = Gcal_api_j.event_of_string body in
-        return (Some result)
+        return (`OK result)
     | `Forbidden, _, _ ->
         (* The event may be on another person's calendar,
            even though Google claims it's on ours.
            This happens when it was added through an invite. *)
-        return None
+        return `Not_found
     | `Not_found, _, _ ->
-        return None
+        return `Not_found
+    | `Bad_request, _, body
+      when error_message_starts_with ~prefix:"Invalid sequence value" body ->
+        return `Invalid_sequence_value
     | x ->
         http_fail "update_event" x
   )
