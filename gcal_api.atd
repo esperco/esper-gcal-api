@@ -263,10 +263,10 @@ type shared_extendedProperties = {
 }
 
 type gadget = {
-  type_ <json name="type">: string;
-  title: string;
-  link: string;
-  iconLink: string;
+  ?type_ <json name="type">: string option;
+  ?title: string option;
+  ?link: string option;
+  ?iconLink: string option;
   ?width:  int option;
   ?height: int option;
   ?display: gadget_display option;
