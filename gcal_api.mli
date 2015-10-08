@@ -7,8 +7,10 @@
 
 type http_response = Util_http_client.response
 
-type with_token = ((string -> http_response Lwt.t) -> http_response Lwt.t)
-  (* Type of the user-provided function that takes care of obtaining
+type with_token =
+  ((string -> http_response Lwt.t) -> http_response Lwt.t)
+  (*
+     Type of the user-provided function that takes care of obtaining
      and storing an access token and then trying the given HTTP calls
      until successful.
 
