@@ -54,9 +54,8 @@ let call_calendar_list
           @^@ [] in
   let uri =
     Google_api_util.make_uri
-      ~path:"/calendar/v3/users/me/calendarList"
       ~query
-      () in
+      "/calendar/v3/users/me/calendarList" in
   Http.get ~headers:[Google_auth.auth_header access_token] uri
 
 let calendar_list
@@ -125,9 +124,9 @@ let calendar_list_unpaged
 let call_calendar_list_get calendar_id access_token =
   let uri =
     Google_api_util.make_uri
-      ~path:("/calendar/v3/users/me/calendarList/"
-             ^ url_encode (Gcalid.to_string calendar_id))
-      () in
+      ("/calendar/v3/users/me/calendarList/"
+       ^ url_encode (Gcalid.to_string calendar_id))
+  in
   Http.get ~headers:[Google_auth.auth_header access_token] uri
 
 let calendar_list_get calendar_id with_token =
@@ -148,9 +147,9 @@ let call_update_calendar_list_item ?colorRgbFormat calid edit access_token =
   let query = ("colorRgbFormat", string_of_bool, colorRgbFormat) @^@ [] in
   let uri =
     Google_api_util.make_uri
-      ~path:("/calendar/v3/users/me/calendarList/" ^ Gcalid.to_string calid)
       ~query
-      () in
+      ("/calendar/v3/users/me/calendarList/" ^ Gcalid.to_string calid)
+  in
   let content_type =
     (* Without this header, Google will return 200 but not actually update! *)
     ("Content-Type", "application/json")
@@ -186,7 +185,7 @@ let call_freebusy
            bzq_items} in
   let headers = [Google_auth.auth_header access_token;
                  "Content-Type", "application/json"] in
-  let url = Google_api_util.make_uri ~path: "/calendar/v3/freeBusy" () in
+  let url = Google_api_util.make_uri "/calendar/v3/freeBusy" in
   Http.post ~headers
     ~body:(Gcal_api_j.string_of_freebusy_request q)
     url
@@ -264,9 +263,8 @@ let call_events_list
   let calid = Gcalid.to_string calendar_id in
   let uri =
     Google_api_util.make_uri
-      ~path:("/calendar/v3/calendars/" ^ url_encode calid ^ "/events")
       ~query
-      ()
+      ("/calendar/v3/calendars/" ^ url_encode calid ^ "/events")
   in
   Http.get ~headers:[Google_auth.auth_header access_token] uri
 
@@ -433,9 +431,8 @@ let events_list_unpaged
 let call_get_calendar_metadata ~calendar_id access_token =
   let uri =
     Google_api_util.make_uri
-      ~path:("/calendar/v3/calendars/"
-             ^ url_encode (Gcalid.to_string calendar_id))
-      ()
+      ("/calendar/v3/calendars/"
+       ^ url_encode (Gcalid.to_string calendar_id))
   in
   Http.get ~headers:[Google_auth.auth_header access_token] uri
 
@@ -465,11 +462,10 @@ let call_get_event
           @^@ [] in
   let uri =
     Google_api_util.make_uri
-      ~path:("/calendar/v3/calendars/"
-             ^ url_encode (Gcalid.to_string calendar_id)
-             ^ "/events/" ^ Geventid.to_string event_id)
       ~query
-      ()
+      ("/calendar/v3/calendars/"
+       ^ url_encode (Gcalid.to_string calendar_id)
+       ^ "/events/" ^ Geventid.to_string event_id)
   in
   Http.get ~headers:[Google_auth.auth_header access_token] uri
 
@@ -497,11 +493,10 @@ let call_delete_event ~calendar_id ~event_id ?sendNotifications token =
           @^@ [] in
   let uri =
     Google_api_util.make_uri
-      ~path:("/calendar/v3/calendars/"
+      ~query
+      ("/calendar/v3/calendars/"
              ^ url_encode (Gcalid.to_string calendar_id)
              ^ "/events/" ^ Geventid.to_string event_id)
-      ~query
-      ()
   in
   Http.delete ~headers:[Google_auth.auth_header token] uri
 
@@ -524,11 +519,10 @@ let call_insert_empty_event
           @^@ ["text", [text]] in
   let uri =
     Google_api_util.make_uri
-      ~path:("/calendar/v3/calendars/"
-             ^ url_encode (Gcalid.to_string calendar_id)
-             ^ "/events/quickAdd")
       ~query
-      ()
+      ("/calendar/v3/calendars/"
+       ^ url_encode (Gcalid.to_string calendar_id)
+       ^ "/events/quickAdd")
   in
   Http.post ~headers:[Google_auth.auth_header access_token] uri
 
@@ -557,11 +551,10 @@ let call_move_event
           @^@ ["destination", [destination]] in
   let uri =
     Google_api_util.make_uri
-      ~path:("/calendar/v3/calendars/"
-             ^ url_encode (Gcalid.to_string calendar_id)
-             ^ "/events/" ^ event_id ^ "/move")
       ~query
-      ()
+      ("/calendar/v3/calendars/"
+       ^ url_encode (Gcalid.to_string calendar_id)
+       ^ "/events/" ^ event_id ^ "/move")
   in
   Http.post ~headers:[Google_auth.auth_header access_token] uri
 
@@ -592,11 +585,10 @@ let call_insert_event
           @^@ [] in
   let uri =
     Google_api_util.make_uri
-      ~path:("/calendar/v3/calendars/"
-             ^ url_encode (Gcalid.to_string calendar_id)
-             ^ "/events")
       ~query
-      ()
+      ("/calendar/v3/calendars/"
+       ^ url_encode (Gcalid.to_string calendar_id)
+       ^ "/events")
   in
   let headers = [Google_auth.auth_header access_token;
                  "Content-Type", "application/json"] in
@@ -644,11 +636,10 @@ let call_update_event
           @^@ [] in
   let uri =
     Google_api_util.make_uri
-      ~path:("/calendar/v3/calendars/"
-             ^ url_encode (Gcalid.to_string calendar_id)
-             ^ "/events/" ^ Geventid.to_string event_id)
       ~query
-      ()
+      ("/calendar/v3/calendars/"
+       ^ url_encode (Gcalid.to_string calendar_id)
+       ^ "/events/" ^ Geventid.to_string event_id)
   in
   let headers = [Google_auth.auth_header access_token;
                  "Content-Type", "application/json"] in
@@ -689,7 +680,7 @@ let update_event
  *)
 let call_insert_calendar ~summary ?timeZone access_token =
   let uri =
-    Google_api_util.make_uri ~path:("/calendar/v3/calendars/") ()
+    Google_api_util.make_uri "/calendar/v3/calendars/"
   in
   let headers = [Google_auth.auth_header access_token;
                  "Content-Type", "application/json"] in
@@ -716,10 +707,9 @@ let insert_calendar ~summary ?timeZone with_token =
 let call_list_acl_rules ~calendar_id access_token =
   let uri =
     Google_api_util.make_uri
-      ~path:("/calendar/v3/calendars/"
-             ^ url_encode (Gcalid.to_string calendar_id)
-             ^ "/acl")
-      ()
+      ("/calendar/v3/calendars/"
+       ^ url_encode (Gcalid.to_string calendar_id)
+       ^ "/acl")
   in
   let headers = [Google_auth.auth_header access_token;
                  "Content-Type", "application/json"] in
@@ -742,10 +732,9 @@ let list_acl_rules ~calendar_id with_token =
 let call_insert_acl_rule ~calendar_id level share_with_email access_token =
   let uri =
     Google_api_util.make_uri
-      ~path:("/calendar/v3/calendars/"
-             ^ url_encode (Gcalid.to_string calendar_id)
-             ^ "/acl")
-      ()
+      ("/calendar/v3/calendars/"
+       ^ url_encode (Gcalid.to_string calendar_id)
+       ^ "/acl")
   in
   let headers = [Google_auth.auth_header access_token;
                  "Content-Type", "application/json"] in
@@ -774,9 +763,9 @@ let insert_acl_rule ~calendar_id level share_with_email with_token =
 let call_update_acl_rule ~calendar_id rule_id level access_token =
   let uri =
     Google_api_util.make_uri
-      ~path:("/calendar/v3/calendars/"
-             ^ url_encode (Gcalid.to_string calendar_id)
-             ^ "/acl/" ^ rule_id) ()
+      ("/calendar/v3/calendars/"
+       ^ url_encode (Gcalid.to_string calendar_id)
+       ^ "/acl/" ^ rule_id)
   in
   let headers = [Google_auth.auth_header access_token;
                  "Content-Type", "application/json"] in
@@ -799,9 +788,9 @@ let update_acl_rule ~calendar_id rule_id level with_token =
 let call_delete_acl_rule ~calendar_id rule_id access_token =
   let uri =
     Google_api_util.make_uri
-      ~path:("/calendar/v3/calendars/"
-             ^ url_encode (Gcalid.to_string calendar_id)
-             ^ "/acl/" ^ rule_id) ()
+      ("/calendar/v3/calendars/"
+       ^ url_encode (Gcalid.to_string calendar_id)
+       ^ "/acl/" ^ rule_id)
   in
   let headers = [Google_auth.auth_header access_token;
                  "Content-Type", "application/json"] in
@@ -854,10 +843,9 @@ let call_watch_events
     access_token =
   let url =
     Google_api_util.make_uri
-      ~path:("/calendar/v3/calendars/"
-             ^ url_encode (Gcalid.to_string calendar_id)
-             ^ "/events/watch")
-      ()
+      ("/calendar/v3/calendars/"
+       ^ url_encode (Gcalid.to_string calendar_id)
+       ^ "/events/watch")
   in
   let headers = [Google_auth.auth_header access_token;
                  "Content-Type", "application/json"] in
@@ -905,9 +893,7 @@ let call_watch_calendar_list
     ?ttl_seconds
     access_token =
   let url =
-    Google_api_util.make_uri
-      ~path:("/calendar/v3/users/me/calendarList/watch")
-      ()
+    Google_api_util.make_uri "/calendar/v3/users/me/calendarList/watch"
   in
   let headers = [Google_auth.auth_header access_token;
                  "Content-Type", "application/json"] in
@@ -946,9 +932,7 @@ let watch_calendar_list
 
 let call_unwatch ~channel_id ~resource_id ?channel_token access_token =
   let url =
-    Google_api_util.make_uri
-      ~path: "/calendar/v3/channels/stop"
-      ()
+    Google_api_util.make_uri "/calendar/v3/channels/stop"
   in
   let headers = [Google_auth.auth_header access_token;
                  "Content-Type", "application/json"] in
@@ -1034,7 +1018,7 @@ let inject_keys_into_color json =
 
 let call_get_colors access_token =
   let uri =
-    Google_api_util.make_uri ~path:("/calendar/v3/colors") ()
+    Google_api_util.make_uri "/calendar/v3/colors"
   in
   Http.get ~headers:[Google_auth.auth_header access_token] uri
 
