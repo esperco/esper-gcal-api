@@ -328,82 +328,6 @@ let events_list
         http_fail "events_list" x
   )
 
-type 'acc for_events_list_result =
-    [ `Gone | `Not_found | `OK of ('acc * Gcal_api_t.events_list_response) ]
-
-let for_events_list
-  ?alwaysIncludeEmail
-  ?iCalUID
-  ?maxAttendees
-  ?maxResults (* maximum number of results to return, in total *)
-  ?orderBy
-  ?q
-  ?sanitizeHtml
-  ?showDeleted
-  ?showHiddenInvitations
-  ?singleEvents
-  ?syncToken
-  ?timeMax
-  ?timeMin
-  ?timeZone
-  ?updatedMin
-  calid uid
-  acc f
-  : 'acc for_events_list_result Lwt.t =
-
-  let limited =
-    maxResults <> None || (timeMin <> None && timeMax <> None)
-  in
-  if not limited && singleEvents = Some true then
-    invalid_arg "Gcal.for_events_list: \
-                 recurring events will expand to infinity";
-
-  let rec loop acc max_remaining page_token =
-    let maxResults =
-      match max_remaining with
-      | None -> 2500 (* maximum page size supported by Google *)
-      | Some n -> min n 2500
-    in
-    events_list
-      ?alwaysIncludeEmail
-      ?iCalUID
-      ?maxAttendees
-      ~maxResults
-      ?orderBy
-      ?pageToken: page_token
-      ?q
-      ?sanitizeHtml
-      ?showDeleted
-      ?showHiddenInvitations
-      ?singleEvents
-      ?syncToken
-      ?timeMax
-      ?timeMin
-      ?timeZone
-      ?updatedMin
-      calid uid
-    >>= function
-    | `Not_found ->
-        return `Not_found
-    | `Gone ->
-        return `Gone
-    | `OK x ->
-        f acc x.evs_items >>= fun acc ->
-        let max_remaining =
-          match max_remaining with
-          | None -> None
-          | Some m -> Some (m - List.length x.evs_items)
-        in
-        match x.evs_nextPageToken, max_remaining with
-        | Some page_token, Some max_remaining when max_remaining > 0 ->
-            loop acc (Some max_remaining) (Some page_token)
-        | Some page_token, None ->
-            loop acc None (Some page_token)
-        | _ ->
-            return (`OK (acc, x))
-  in
-  loop acc maxResults None
-
 type events_list_unpaged_result = [
   | `OK of (string (* timezone *)
             * Gcalid.t
@@ -448,28 +372,128 @@ let events_list_unpaged
   calid uid
   : events_list_unpaged_result Lwt.t =
 
-  for_events_list
-    ?alwaysIncludeEmail
-    ?iCalUID
-    ?maxAttendees
-    ?maxResults
-    ?orderBy
-    ?q
-    ?sanitizeHtml
-    ?showDeleted
-    ?showHiddenInvitations
-    ?singleEvents
-    ?syncToken
-    ?timeMax
-    ?timeMin
-    ?timeZone
-    ?updatedMin
-    calid uid
-    [] (fun acc events -> return (List.rev_append events acc))
-  >>= function
-  | (`Not_found|`Gone) as bad -> return bad
-  | `OK (acc, x) -> return (`OK (x.evs_timeZone, calid,
-                                 List.rev acc, x.evs_nextSyncToken))
+  let limited =
+    maxResults <> None || (timeMin <> None && timeMax <> None)
+  in
+  if not limited && singleEvents = Some true then
+    invalid_arg "Gcal.events_list_unpaged: \
+                 recurring events will expand to infinity";
+
+  let rec loop acc max_remaining page_token =
+    let maxResults =
+      match max_remaining with
+      | None -> 2500 (* maximum page size supported by Google *)
+      | Some n -> min n 2500
+    in
+    events_list
+      ?alwaysIncludeEmail
+      ?iCalUID
+      ?maxAttendees
+      ~maxResults
+      ?orderBy
+      ?pageToken: page_token
+      ?q
+      ?sanitizeHtml
+      ?showDeleted
+      ?showHiddenInvitations
+      ?singleEvents
+      ?syncToken
+      ?timeMax
+      ?timeMin
+      ?timeZone
+      ?updatedMin
+      calid uid
+    >>= function
+    | `Not_found ->
+        return `Not_found
+    | `Gone ->
+        return `Gone
+    | `OK x ->
+        let acc = List.rev_append x.evs_items acc in
+        let max_remaining =
+          match max_remaining with
+          | None -> None
+          | Some m -> Some (m - List.length acc)
+        in
+        match x.evs_nextPageToken, max_remaining with
+        | Some page_token, Some max_remaining when max_remaining > 0 ->
+            loop acc (Some max_remaining) (Some page_token)
+        | Some page_token, None ->
+            loop acc None (Some page_token)
+        | _ ->
+            return (`OK (x.evs_timeZone, calid,
+                         List.rev acc, x.evs_nextSyncToken))
+  in
+  loop [] maxResults None
+
+let events_stream
+  ?alwaysIncludeEmail
+  ?iCalUID
+  ?maxAttendees
+  ?maxResults (* maximum number of results to return, in total *)
+  ?orderBy
+  ?q
+  ?sanitizeHtml
+  ?showDeleted
+  ?showHiddenInvitations
+  ?singleEvents
+  ?syncToken
+  ?timeMax
+  ?timeMin
+  ?timeZone
+  ?updatedMin
+  calid uid
+=
+  let limited =
+    maxResults <> None || (timeMin <> None && timeMax <> None)
+  in
+  if not limited && singleEvents = Some true then
+    invalid_arg "Gcal.for_events_list: \
+                 recurring events will expand to infinity";
+
+  Util_lwt.create_paged_stream (maxResults, Some None)
+    (fun (max_remaining, page_token) ->
+     let maxResults =
+       match max_remaining with
+       | None -> 2500 (* maximum page size supported by Google *)
+       | Some n -> min n 2500
+     in
+     match page_token with
+     | Some pageToken when 0 < maxResults ->
+         events_list
+           ?alwaysIncludeEmail
+           ?iCalUID
+           ?maxAttendees
+           ~maxResults
+           ?orderBy
+           ?pageToken
+           ?q
+           ?sanitizeHtml
+           ?showDeleted
+           ?showHiddenInvitations
+           ?singleEvents
+           ?syncToken
+           ?timeMax
+           ?timeMin
+           ?timeZone
+           ?updatedMin
+           calid uid
+         >>= (function
+         | `Gone ->
+             logf `Warning "410 in events_list";
+             return ((max_remaining, page_token), [])
+         | `Not_found ->
+             logf `Warning "404 in events_list";
+             return ((max_remaining, page_token), [])
+         | `OK x ->
+             let max_remaining = match max_remaining with
+               | None -> None
+               | Some m -> Some (m - List.length x.evs_items)
+             in
+             let page_token = if x.evs_nextPageToken = None then None
+                              else Some x.evs_nextPageToken in
+             return ((max_remaining, page_token), x.evs_items))
+     | _ -> return ((max_remaining, page_token), []))
 
 
 (* So we can get the time zone without doing an event list *)
