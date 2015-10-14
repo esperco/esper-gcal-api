@@ -82,6 +82,30 @@ val events_list :
   with_token ->
   events_list_result Lwt.t
 
+type 'acc for_events_list_result =
+    [ `Gone | `Not_found | `OK of 'acc * Gcal_api_t.events_list_response ]
+
+val for_events_list :
+  ?alwaysIncludeEmail:bool ->
+  ?iCalUID:string ->
+  ?maxAttendees:int ->
+  ?maxResults:int ->
+  ?orderBy:Gcal_api_t.event_order_by ->
+  ?q:string ->
+  ?sanitizeHtml:bool ->
+  ?showDeleted:bool ->
+  ?showHiddenInvitations:bool ->
+  ?singleEvents:bool ->
+  ?syncToken:string ->
+  ?timeMax:Util_time.t ->
+  ?timeMin:Util_time.t ->
+  ?timeZone:string ->
+  ?updatedMin:Util_time.t ->
+  Gcalid.t ->
+  with_token ->
+  'acc -> ('acc -> Gcal_api_t.event list -> 'acc Lwt.t) ->
+  'acc for_events_list_result Lwt.t
+
 type events_list_unpaged_result =
     [ `Gone
     | `Not_found
