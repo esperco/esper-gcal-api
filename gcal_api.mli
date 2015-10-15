@@ -107,6 +107,10 @@ val events_list_unpaged :
   with_token ->
   events_list_unpaged_result Lwt.t
 
+(* exceptions raised when fetching data from within events_stream *)
+exception Events_gone
+exception Events_not_found
+
 val events_stream :
   ?alwaysIncludeEmail:bool ->
   ?iCalUID:string ->

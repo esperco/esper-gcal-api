@@ -426,6 +426,10 @@ let events_list_unpaged
   in
   loop [] maxResults None
 
+(* exceptions raised when fetching data from within events_stream *)
+exception Events_gone
+exception Events_not_found
+
 let events_stream
   ?alwaysIncludeEmail
   ?iCalUID
@@ -479,12 +483,8 @@ let events_stream
            ?updatedMin
            calid uid
          >>= (function
-         | `Gone ->
-             logf `Warning "410 in events_list";
-             return ((max_remaining, page_token), [])
-         | `Not_found ->
-             logf `Warning "404 in events_list";
-             return ((max_remaining, page_token), [])
+         | `Gone ->      fail Events_gone
+         | `Not_found -> fail Events_not_found
          | `OK x ->
              let max_remaining = match max_remaining with
                | None -> None
