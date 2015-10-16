@@ -45,7 +45,7 @@ let calendar_metadata_of_calendar_list_item
   }
 
 let get_timezone x =
-  match x.cal_timeZone with
+  match x.ci_timeZone with
   | None ->
       (* don't know if this ever happens *)
       "UTC"
