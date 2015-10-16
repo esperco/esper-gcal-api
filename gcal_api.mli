@@ -49,11 +49,11 @@ val update_calendar_list_item :
   Gcal_api_t.calendar_list_item option Lwt.t
 
 val freebusy :
-  Gcal_api_t.timestamp ->
-  Gcal_api_t.timestamp ->
   ?timeZone:string ->
   ?groupExpansionMax:int ->
   ?calendarExpansionMax:int ->
+  timeMin:Gcal_api_t.timestamp ->
+  timeMax:Gcal_api_t.timestamp ->
   Gcal_api_t.gcalid list ->
   with_token ->
   Gcal_api_t.freebusy_response option Lwt.t
@@ -108,48 +108,48 @@ val events_list_unpaged :
   events_list_unpaged_result Lwt.t
 
 val get_calendar_metadata :
-  calendar_id:Gcalid.t ->
+  Gcalid.t ->
   with_token ->
   Gcal_api_t.calendar_metadata option Lwt.t
 
 val get_event :
-  calendar_id:Gcalid.t ->
-  event_id:Geventid.t ->
   ?alwaysIncludeEmail:bool ->
   ?maxAttendees:int ->
   ?sanitizeHtml:bool ->
   ?timeZone:string ->
+  Gcalid.t ->
+  Geventid.t ->
   with_token ->
   Gcal_api_t.event option Lwt.t
 
 val delete_event :
-  calendar_id:Gcalid.t ->
-  event_id:Geventid.t ->
   ?sendNotifications:bool ->
+  Gcalid.t ->
+  Geventid.t ->
   with_token ->
   unit Lwt.t
 
 val insert_empty_event :
   ?sanitizeHtml:bool ->
   ?sendNotifications:bool ->
-  calendar_id:Gcalid.t ->
+  Gcalid.t ->
   string ->
   with_token ->
   Gcal_api_t.event option Lwt.t
 
 val move_event :
-  calendar_id:Gcalid.t ->
-  destination:string ->
-  event_id:string ->
   ?sendNotifications:bool ->
+  source:Gcalid.t ->
+  destination:Gcalid.t ->
+  Geventid.t ->
   with_token ->
   Gcal_api_t.event option Lwt.t
 
 val insert_event :
-  calendar_id:Gcalid.t ->
   ?maxAttendees:int ->
   ?sanitizeHtml:'a ->
   ?sendNotifications:bool ->
+  Gcalid.t ->
   Gcal_api_t.event_edit ->
   ((string -> http_response Lwt.t) ->
    (Cohttp.Code.status_code * 'b * string) Lwt.t) ->
@@ -161,15 +161,14 @@ type update_event_result =
   [ `OK of Gcal_api_t.event | `Not_found | `Invalid_sequence_value ]
 
 val update_event :
-  calendar_id:Gcalid.t ->
-  event_id:Geventid.t ->
   ?alwaysIncludeEmail:bool ->
   ?maxAttendees:int ->
   ?sanitizeHtml:bool ->
   ?sendNotifications:bool ->
+  Gcalid.t ->
+  Geventid.t ->
   Gcal_api_t.event_edit ->
-  ((string -> http_response Lwt.t) ->
-   (Cohttp.Code.status_code * 'b * string) Lwt.t) ->
+  with_token ->
   update_event_result Lwt.t
 
 val insert_calendar :
@@ -179,58 +178,58 @@ val insert_calendar :
   Gcal_api_t.calendar_list_item Lwt.t
 
 val list_acl_rules :
-  calendar_id:Gcalid.t ->
+  Gcalid.t ->
   with_token ->
   Gcal_api_t.acl_list_response option Lwt.t
 
 val insert_acl_rule :
-  calendar_id:Gcalid.t ->
+  Gcalid.t ->
   Gcal_api_t.access_role ->
   Email.t ->
   with_token ->
   Gcal_api_t.acl_rule Lwt.t
 
 val update_acl_rule :
-  calendar_id:Gcalid.t ->
+  Gcalid.t ->
   string ->
   Gcal_api_t.access_role ->
   with_token ->
   Gcal_api_t.acl_rule Lwt.t
 
 val delete_acl_rule :
-  calendar_id:Gcalid.t ->
+  Gcalid.t ->
   string ->
   ((string -> http_response Lwt.t) ->
    (Cohttp.Code.status_code * 'b * string) Lwt.t) ->
   unit Lwt.t
 
 val share_calendar :
-  calendar_id:Gcalid.t ->
+  Gcalid.t ->
   Email.t list ->
   with_token ->
   unit Lwt.t
 
 val watch_events :
-  calendar_id:Gcalid.t ->
-  channel_id:string ->
-  receiving_url:string ->
   ?channel_token:string ->
   ?ttl_seconds:float ->
+  Gcalid.t ->
+  channel_id:string ->
+  receiving_url:string ->
   with_token ->
   Gcal_api_t.watch_response option Lwt.t
 
 val watch_calendar_list :
-  channel_id:string ->
-  receiving_url:string ->
   ?channel_token:string ->
   ?ttl_seconds:float ->
+  channel_id:string ->
+  receiving_url:string ->
   with_token ->
   Gcal_api_t.watch_response Lwt.t
 
 val unwatch :
+  ?channel_token:string ->
   channel_id:string ->
   resource_id:string ->
-  ?channel_token:string ->
   with_token ->
   unit Lwt.t
 
