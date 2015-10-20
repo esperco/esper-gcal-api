@@ -426,6 +426,75 @@ let events_list_unpaged
   in
   loop [] maxResults None
 
+(* exceptions raised when fetching data from within events_stream *)
+exception Events_gone
+exception Events_not_found
+
+let events_stream
+  ?alwaysIncludeEmail
+  ?iCalUID
+  ?maxAttendees
+  ?maxResults (* maximum number of results to return, in total *)
+  ?orderBy
+  ?q
+  ?sanitizeHtml
+  ?showDeleted
+  ?showHiddenInvitations
+  ?singleEvents
+  ?syncToken
+  ?timeMax
+  ?timeMin
+  ?timeZone
+  ?updatedMin
+  calid uid
+=
+  let limited =
+    maxResults <> None || (timeMin <> None && timeMax <> None)
+  in
+  if not limited && singleEvents = Some true then
+    invalid_arg "Gcal.for_events_list: \
+                 recurring events will expand to infinity";
+
+  Util_lwt.create_paged_stream (maxResults, Some None)
+    (fun (max_remaining, page_token) ->
+     let maxResults =
+       match max_remaining with
+       | None -> 2500 (* maximum page size supported by Google *)
+       | Some n -> min n 2500
+     in
+     match page_token with
+     | Some pageToken when 0 < maxResults ->
+         events_list
+           ?alwaysIncludeEmail
+           ?iCalUID
+           ?maxAttendees
+           ~maxResults
+           ?orderBy
+           ?pageToken
+           ?q
+           ?sanitizeHtml
+           ?showDeleted
+           ?showHiddenInvitations
+           ?singleEvents
+           ?syncToken
+           ?timeMax
+           ?timeMin
+           ?timeZone
+           ?updatedMin
+           calid uid
+         >>= (function
+         | `Gone ->      fail Events_gone
+         | `Not_found -> fail Events_not_found
+         | `OK x ->
+             let max_remaining = match max_remaining with
+               | None -> None
+               | Some m -> Some (m - List.length x.evs_items)
+             in
+             let page_token = if x.evs_nextPageToken = None then None
+                              else Some x.evs_nextPageToken in
+             return ((max_remaining, page_token), x.evs_items))
+     | _ -> return ((max_remaining, page_token), []))
+
 
 (* So we can get the time zone without doing an event list *)
 let call_get_calendar_metadata calendar_id access_token =

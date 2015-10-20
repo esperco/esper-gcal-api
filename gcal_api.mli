@@ -107,6 +107,30 @@ val events_list_unpaged :
   with_token ->
   events_list_unpaged_result Lwt.t
 
+(* exceptions raised when fetching data from within events_stream *)
+exception Events_gone
+exception Events_not_found
+
+val events_stream :
+  ?alwaysIncludeEmail:bool ->
+  ?iCalUID:string ->
+  ?maxAttendees:int ->
+  ?maxResults:int ->
+  ?orderBy:Gcal_api_t.event_order_by ->
+  ?q:string ->
+  ?sanitizeHtml:bool ->
+  ?showDeleted:bool ->
+  ?showHiddenInvitations:bool ->
+  ?singleEvents:bool ->
+  ?syncToken:string ->
+  ?timeMax:Util_time.t ->
+  ?timeMin:Util_time.t ->
+  ?timeZone:string ->
+  ?updatedMin:Util_time.t ->
+  Gcalid.t ->
+  with_token ->
+  Gcal_api_t.event Lwt_stream.t
+
 val get_calendar_metadata :
   Gcalid.t ->
   with_token ->
