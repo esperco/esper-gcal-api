@@ -129,7 +129,7 @@ val events_stream :
   ?updatedMin:Util_time.t ->
   Gcalid.t ->
   with_token ->
-  Gcal_api_t.event Lwt_stream.t
+  Gcal_api_t.event Lwt_stream.t * (unit -> Gcal_api_t.events_list_response)
 
 val get_calendar_metadata :
   Gcalid.t ->
