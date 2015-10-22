@@ -372,7 +372,7 @@ let events_stream
        | Some n -> min n 2500
      in
      match page_token with
-     | Some pageToken when 0 <= maxResults ->
+     | Some pageToken when maxResults > 0 ->
          events_list
            ?alwaysIncludeEmail
            ?iCalUID
