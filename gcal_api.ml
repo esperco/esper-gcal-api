@@ -911,29 +911,6 @@ let delete_acl_rule calendar_id rule_id with_token =
         http_fail "delete_acl_rule" x
   )
 
-let share_calendar calendar_id emails with_token =
-  list_acl_rules calendar_id with_token >>= function
-  | None -> Http_exn.not_found "Cannot access calendar"
-  | Some response ->
-      Util_conc.iter emails (fun email ->
-        let for_email = function
-          | { acl_scope = { sco_value = Some e } }
-            when e = Email.to_string email -> true
-          | _ -> false
-        in
-        match BatList.Exceptionless.find for_email response.acls_items with
-        | None ->
-            insert_acl_rule calendar_id `Writer email with_token
-            >>= fun _inserted -> return ()
-        | Some acl ->
-            match acl.acl_role with
-            | `Writer | `Owner -> return ()
-            | _ ->
-                update_acl_rule
-                  calendar_id acl.acl_id `Writer with_token
-                >>= fun _updated -> return ()
-      )
-
 (*** Listeners ***)
 
 let call_watch_events

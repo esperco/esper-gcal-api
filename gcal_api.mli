@@ -227,12 +227,6 @@ val delete_acl_rule :
    (Cohttp.Code.status_code * 'b * string) Lwt.t) ->
   unit Lwt.t
 
-val share_calendar :
-  Gcalid.t ->
-  Email.t list ->
-  with_token ->
-  unit Lwt.t
-
 val watch_events :
   ?channel_token:string ->
   ?ttl_seconds:float ->
