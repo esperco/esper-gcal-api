@@ -135,7 +135,7 @@ type event = {
   ?organizer: person option; (* missing from cancelled events *)
   ?start: event_time option; (* missing from cancelled events *)
   ?end: event_time option; (* exclusive; missing from cancelled events *)
-  ~recurrence: string list; (* list of rules *)
+  ?recurrence: string list option; (* list of rules *)
   ?recurringEventId: geventid option;
   ?originalStartTime: event_time option;
   ~transparency <ocaml default="`Opaque">: transparency;
