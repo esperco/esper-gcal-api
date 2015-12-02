@@ -35,13 +35,13 @@ let sort_events_by_start_time l get_event =
 let calendar_metadata_of_calendar_list_item
     (x : calendar_list_item) : calendar_metadata =
   {
-    cal_kind = x.ci_kind;
-    cal_etag = x.ci_etag;
-    cal_id = x.ci_id;
-    cal_summary = x.ci_summary;
-    cal_description = x.ci_description;
-    cal_location = x.ci_location;
-    cal_timeZone = x.ci_timeZone;
+    gcal_kind = x.ci_kind;
+    gcal_etag = x.ci_etag;
+    gcal_id = x.ci_id;
+    gcal_summary = x.ci_summary;
+    gcal_description = x.ci_description;
+    gcal_location = x.ci_location;
+    gcal_timeZone = x.ci_timeZone;
   }
 
 let get_timezone x =
