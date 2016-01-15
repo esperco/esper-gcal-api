@@ -370,7 +370,7 @@ let events_stream
                            of the event stream"
     | Some resp -> resp in
 
-  let stream = Util_lwt.create_paged_stream (maxResults, Some None)
+  let stream = Util_lwt_stream.create_paged_stream (maxResults, Some None)
     (fun (max_remaining, page_token) ->
       let maxResults =
         match max_remaining with
