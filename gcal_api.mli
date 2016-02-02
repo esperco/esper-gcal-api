@@ -68,8 +68,10 @@ val events_list :
   ?maxResults:int ->
   ?orderBy:Gcal_api_t.event_order_by ->
   ?pageToken:string ->
+  ?privateExtendedProperties:(string * string) list ->
   ?q:string ->
   ?sanitizeHtml:bool ->
+  ?sharedExtendedProperties:(string * string) list ->
   ?showDeleted:bool ->
   ?showHiddenInvitations:bool ->
   ?singleEvents:bool ->
@@ -93,8 +95,10 @@ val events_list_unpaged :
   ?maxAttendees:int ->
   ?maxResults:int ->
   ?orderBy:Gcal_api_t.event_order_by ->
+  ?privateExtendedProperties:(string * string) list ->
   ?q:string ->
   ?sanitizeHtml:bool ->
+  ?sharedExtendedProperties:(string * string) list ->
   ?showDeleted:bool ->
   ?showHiddenInvitations:bool ->
   ?singleEvents:bool ->
@@ -117,8 +121,10 @@ val events_stream :
   ?maxAttendees:int ->
   ?maxResults:int ->
   ?orderBy:Gcal_api_t.event_order_by ->
+  ?privateExtendedProperties:(string * string) list ->
   ?q:string ->
   ?sanitizeHtml:bool ->
+  ?sharedExtendedProperties:(string * string) list ->
   ?showDeleted:bool ->
   ?showHiddenInvitations:bool ->
   ?singleEvents:bool ->

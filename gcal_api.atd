@@ -144,7 +144,7 @@ type event = {
   ?sequence: int option; (* missing from cancelled events *)
   ~attendees: attendee list;
   ~attendeesOmitted: bool;
-  ?extendedProperties: extendedProperties option;
+  ?extendedProperties: extended_properties option;
   ?gadget: gadget option;
   ~anyoneCanAddSelf: bool;
   ~guestsCanInviteOthers <ocaml default="true">: bool;
@@ -180,7 +180,7 @@ type event_edit = {
   ~transparency <ocaml default="`Opaque">: transparency;
   ~visibility <ocaml default="`Default">: visibility;
   ?sequence: int option;
-  ?extendedProperties: extendedProperties option;
+  ?extendedProperties: extended_properties option;
   ?gadget: gadget option;
   ~anyoneCanAddSelf: bool;
   ~guestsCanInviteOthers <ocaml default="true">: bool;
@@ -247,20 +247,16 @@ type event_time = {
   ?timeZone: string option;
 }
 
-type extendedProperties = {
-  ?private_ <json name="private">: private_extendedProperties option;
-  ?shared: shared_extendedProperties option;
+type extended_properties = {
+  ?private_ <json name="private">: private_extended_properties option;
+  ?shared: shared_extended_properties option;
 }
 
-type private_extendedProperties = {
+type private_extended_properties = (string * string) list <json repr="object">
   (* any fields we want; values must be strings *)
-  ?sample_key: string option;
-}
 
-type shared_extendedProperties = {
+type shared_extended_properties = (string * string) list <json repr="object">
   (* any fields we want; values must be strings *)
-  ?sample_key: string option;
-}
 
 type gadget = {
   ?type_ <json name="type">: string option;

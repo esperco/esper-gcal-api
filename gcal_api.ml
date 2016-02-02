@@ -221,6 +221,9 @@ type events_list_result = [
   | `Gone
 ]
 
+let string_of_property (k, v) =
+  sprintf "%s=%s" k v
+
 let call_events_list
     ?alwaysIncludeEmail
     ?iCalUID
@@ -228,8 +231,10 @@ let call_events_list
     ?maxResults
     ?orderBy
     ?pageToken
+    ?privateExtendedProperties
     ?q
     ?sanitizeHtml
+    ?sharedExtendedProperties
     ?showDeleted
     ?showHiddenInvitations
     ?singleEvents
@@ -249,9 +254,13 @@ let call_events_list
           @^@ ("maxResults",            string_of_int,  maxResults)
           @^@ ("orderBy",               string_of_order_by, orderBy)
           @^@ ("pageToken",             string,         pageToken)
-          @^@ ("q",                     string,         q)
+          @^@ ("privateExtendedProperty", string_of_property,
+                                          privateExtendedProperties)
+          @^^@ ("q",                    string,         q)
           @^@ ("sanitizeHtml",          string_of_bool, sanitizeHtml)
-          @^@ ("showDeleted",           string_of_bool, showDeleted)
+          @^@ ("sharedExtendedProperty", string_of_property,
+                                         sharedExtendedProperties)
+          @^^@ ("showDeleted",          string_of_bool, showDeleted)
           @^@ ("showHiddenInvitations", string_of_bool, showHiddenInvitations)
           @^@ ("singleEvents",          string_of_bool, singleEvents)
           @^@ ("syncToken",             string, syncToken)
@@ -275,8 +284,10 @@ let events_list
     ?maxResults
     ?orderBy
     ?pageToken
+    ?privateExtendedProperties
     ?q
     ?sanitizeHtml
+    ?sharedExtendedProperties
     ?showDeleted
     ?showHiddenInvitations
     ?singleEvents
@@ -297,8 +308,10 @@ let events_list
         ?maxResults
         ?orderBy
         ?pageToken
+        ?privateExtendedProperties
         ?q
         ?sanitizeHtml
+        ?sharedExtendedProperties
         ?showDeleted
         ?showHiddenInvitations
         ?singleEvents
@@ -338,8 +351,10 @@ let events_stream
   ?maxAttendees
   ?maxResults (* maximum number of results to return, in total *)
   ?orderBy
+  ?privateExtendedProperties
   ?q
   ?sanitizeHtml
+  ?sharedExtendedProperties
   ?showDeleted
   ?showHiddenInvitations
   ?singleEvents
@@ -387,8 +402,10 @@ let events_stream
             ~maxResults
             ?orderBy
             ?pageToken
+            ?privateExtendedProperties
             ?q
             ?sanitizeHtml
+            ?sharedExtendedProperties
             ?showDeleted
             ?showHiddenInvitations
             ?singleEvents
@@ -465,8 +482,10 @@ let events_list_unpaged
   ?maxAttendees
   ?maxResults (* maximum number of results to return, in total *)
   ?orderBy
+  ?privateExtendedProperties
   ?q
   ?sanitizeHtml
+  ?sharedExtendedProperties
   ?showDeleted
   ?showHiddenInvitations
   ?singleEvents
@@ -485,8 +504,10 @@ let events_list_unpaged
       ?maxAttendees
       ?maxResults
       ?orderBy
+      ?privateExtendedProperties
       ?q
       ?sanitizeHtml
+      ?sharedExtendedProperties
       ?showDeleted
       ?showHiddenInvitations
       ?singleEvents
