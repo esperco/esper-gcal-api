@@ -277,6 +277,15 @@ let call_events_list
   in
   Http.get ~headers:[Google_auth.auth_header access_token] uri
 
+let not_with_sync_token name opt =
+  match opt with
+  | None -> ()
+  | Some _ ->
+      invalid_arg (sprintf
+                     "Gcal API event list: \
+                      parameter %s is not compatible with syncToken"
+                     name)
+
 let events_list
     ?alwaysIncludeEmail
     ?iCalUID
@@ -298,6 +307,25 @@ let events_list
     ?updatedMin
     calendar_id with_token
   : events_list_result Lwt.t =
+
+  (match syncToken with
+   | None -> ()
+   | Some _ ->
+       (match showDeleted with
+        | None | Some true -> ()
+        | Some false ->
+            invalid_arg "Gcal API event list: \
+                         showDeleted=false is incompatible with a syncToken"
+       );
+       not_with_sync_token "iCalUID" iCalUID;
+       not_with_sync_token "orderBy" orderBy;
+       not_with_sync_token "privateExtendedProperty" privateExtendedProperties;
+       not_with_sync_token "q" q;
+       not_with_sync_token "sharedExtendedProperty" sharedExtendedProperties;
+       not_with_sync_token "timeMin" timeMin;
+       not_with_sync_token "timeMax" timeMax;
+       not_with_sync_token "updatedMin" updatedMin;
+  );
 
   Cloudwatch.time "google.api.calendar.events_list" (fun () ->
     with_token (fun token ->
@@ -365,6 +393,7 @@ let events_stream
   ?updatedMin
   calid uid
   =
+
   let limited =
     maxResults <> None || (timeMin <> None && timeMax <> None)
   in
