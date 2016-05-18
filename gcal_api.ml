@@ -1089,14 +1089,14 @@ let resource_state_of_string = function
   | "sync" -> `Sync
   | "exists" -> `Exists
   | "not_exists" -> `Not_exists
-  | s -> Http_exn.bad_request ("Unknown resource state " ^ s)
+  | s -> Http_exn.bad_request `Bad_request ("Unknown resource state " ^ s)
 
 let parse_notification
     (get_http_header: string -> string list) : notification =
 
   let get k =
     match get_http_header k with
-    | [] -> Http_exn.bad_request (sprintf "Missing %s header" k)
+    | [] -> Http_exn.bad_request `Bad_request (sprintf "Missing %s header" k)
     | s :: _ -> s
   in
   let opt k =
