@@ -206,7 +206,7 @@ type visibility = [
 | Confidential <json name="confidential">
 ]
 
-type responseStatus = [
+type response_status = [
   NeedsAction <json name="needsAction">
 | Declined    <json name="declined">
 | Tentative   <json name="tentative">
@@ -227,7 +227,7 @@ type attendee = {
   ~self: bool;
   ~resource: bool;
   ~optional: bool;
-  responseStatus: responseStatus;
+  responseStatus: response_status;
   ?comment: string option;
   ~additionalGuests: int;
 } <ocaml field_prefix="their_">
