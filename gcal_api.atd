@@ -218,7 +218,7 @@ type person = {
   ?email: string option;
   ?displayName: string option;
   ~self: bool;
-} <ocaml field_prefix="our_">
+} <ocaml field_prefix="person_">
 
 type attendee = {
   ?id: string option;
