@@ -61,6 +61,10 @@ type cached_calendar_list = {
   ?items : calendar_list_item list option;
 } <ocaml field_prefix="ccl_">
 
+type cached_calendar_list_item = {
+  ?item : calendar_list_item option;
+} <ocaml field_prefix="cci_">
+
 type access_role = [
   None           <json name="none">
 | FreeBusyReader <json name="freeBusyReader">
