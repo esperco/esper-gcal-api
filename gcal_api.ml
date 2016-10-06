@@ -445,8 +445,8 @@ let events_stream
             ?updatedMin
             calid uid
           >>= (function
-            | `Gone ->      fail Events_gone
-            | `Not_found -> fail Events_not_found
+            | `Gone -> Trax.raise __LOC__ Events_gone
+            | `Not_found -> Trax.raise __LOC__ Events_not_found
             | `OK x ->
                 let max_remaining, no_remaining =
                   match max_remaining with
@@ -558,7 +558,6 @@ let events_list_unpaged
       | Events_gone      -> return `Gone
       | _                -> Trax.raise __LOC__ e
     )
-
 
 (* So we can get the time zone without doing an event list *)
 let call_get_calendar_metadata calendar_id access_token =
