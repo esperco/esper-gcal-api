@@ -826,6 +826,62 @@ let update_event
         http_fail "update_event" x
   )
 
+let call_patch_event
+    ?alwaysIncludeEmail
+    ?maxAttendees
+    ?sendNotifications
+    ?supportsAttachments
+    calendar_id event_id
+    event_patch access_token =
+  let query = ("alwaysIncludeEmail",  string_of_bool, alwaysIncludeEmail)
+          @^@ ("maxAttendees",        string_of_int,  maxAttendees)
+          @^@ ("sendNotifications",   string_of_bool, sendNotifications)
+          @^@ ("supportsAttachments", string_of_bool, supportsAttachments)
+          @^@ [] in
+  let uri =
+    Google_api_util.make_uri
+      ~query
+      ("/calendar/v3/calendars/"
+       ^ url_encode (Gcalid.to_string calendar_id)
+       ^ "/events/" ^ Geventid.to_string event_id)
+  in
+  let headers = [Google_auth.auth_header access_token;
+                 "Content-Type", "application/json"] in
+  let body = Gcal_api_j.string_of_event_patch event_patch in
+  Http.patch ~headers ~body uri
+
+let patch_event
+    ?alwaysIncludeEmail
+    ?maxAttendees
+    ?sendNotifications
+    ?supportsAttachments
+    calendar_id event_id event_patch with_token : update_event_result Lwt.t =
+  Cloudwatch.time "google.api.calendar.patch_event" (fun () ->
+    with_token (fun token ->
+      call_patch_event
+        ?alwaysIncludeEmail
+        ?maxAttendees
+        ?sendNotifications
+        ?supportsAttachments
+        calendar_id event_id event_patch token
+    ) >>= function
+    | `OK, _headers, body ->
+        let result = Gcal_api_j.event_of_string body in
+        return (`OK result)
+    | `Forbidden, _, _ ->
+        (* The event may be on another person's calendar,
+           even though Google claims it's on ours.
+           This happens when it was added through an invite. *)
+        return `Not_found
+    | `Not_found, _, _ ->
+        return `Not_found
+    | `Bad_request, _, body
+      when error_message_starts_with ~prefix:"Invalid sequence value" body ->
+        return `Invalid_sequence_value
+    | x ->
+        http_fail "patch_event" x
+  )
+
 (** Creates a new calendar with the given summary. Returns a
  *  description of the new calendar which includes the new id.
  *)

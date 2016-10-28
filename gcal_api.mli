@@ -201,6 +201,17 @@ val update_event :
   with_token ->
   update_event_result Lwt.t
 
+val patch_event :
+  ?alwaysIncludeEmail:bool ->
+  ?maxAttendees:int ->
+  ?sendNotifications:bool ->
+  ?supportsAttachments:bool ->
+  Gcalid.t ->
+  Geventid.t ->
+  Gcal_api_t.event_patch ->
+  with_token ->
+  update_event_result Lwt.t
+
 val insert_calendar :
   summary:string ->
   ?timeZone:string ->

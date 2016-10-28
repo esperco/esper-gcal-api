@@ -192,6 +192,31 @@ type event_edit = {
   ?source: source option;
 } <ocaml field_prefix="ew_">
 
+type event_patch = {
+  ?start: event_time option;
+  ?end: event_time option;
+  ?reminders: event_reminders option;
+  ?attendees: attendee list option;
+
+  ?attendeesOmitted: bool option;
+  ?status: event_status option;
+  ?summary: string option;
+  ?description: string option;
+  ?location: string option;
+  ?colorId: string option;
+  ?recurrence: string list option; (* list of rules *)
+  ?originalStartTime: event_time option;
+  ?transparency: transparency option;
+  ?visibility: visibility option;
+  ?sequence: int option;
+  ?extendedProperties: extended_properties option;
+  ?gadget: gadget option;
+  ?anyoneCanAddSelf: bool option;
+  ?guestsCanInviteOthers: bool option;
+  ?guestsCanSeeOtherGuests: bool option;
+  ?source: source option;
+} <ocaml field_prefix="ev_patch_">
+
 type event_status = [
   Confirmed <json name="confirmed">
 | Tentative <json name="tentative">
