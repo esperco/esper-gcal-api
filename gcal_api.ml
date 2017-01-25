@@ -526,37 +526,37 @@ let events_list_unpaged
   calid uid
   : events_list_unpaged_result Lwt.t =
 
-  let stream, get_last_response =
-    events_stream
-      ?alwaysIncludeEmail
-      ?iCalUID
-      ?maxAttendees
-      ?maxResults
-      ?orderBy
-      ?privateExtendedProperties
-      ?q
-      ?sanitizeHtml
-      ?sharedExtendedProperties
-      ?showDeleted
-      ?showHiddenInvitations
-      ?singleEvents
-      ?syncToken
-      ?timeMax
-      ?timeMin
-      ?timeZone
-      ?updatedMin
-      calid uid in
   catch
     (fun () ->
-      Lwt_stream.to_list stream >>= fun events ->
-      let x = get_last_response () in
-      return (`OK (x.evs_timeZone, calid, events, x.evs_nextSyncToken))
+       let stream, get_last_response =
+         events_stream
+           ?alwaysIncludeEmail
+           ?iCalUID
+           ?maxAttendees
+           ?maxResults
+           ?orderBy
+           ?privateExtendedProperties
+           ?q
+           ?sanitizeHtml
+           ?sharedExtendedProperties
+           ?showDeleted
+           ?showHiddenInvitations
+           ?singleEvents
+           ?syncToken
+           ?timeMax
+           ?timeMin
+           ?timeZone
+           ?updatedMin
+           calid uid in
+       Lwt_stream.to_list stream >>= fun events ->
+       let x = get_last_response () in
+       return (`OK (x.evs_timeZone, calid, events, x.evs_nextSyncToken))
     )
     (fun e ->
-      match Trax.unwrap e with
-      | Events_not_found -> return `Not_found
-      | Events_gone      -> return `Gone
-      | _                -> Trax.raise __LOC__ e
+       match Trax.unwrap e with
+       | Events_not_found -> return `Not_found
+       | Events_gone      -> return `Gone
+       | _                -> Trax.raise __LOC__ e
     )
 
 (* So we can get the time zone without doing an event list *)
