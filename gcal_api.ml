@@ -637,8 +637,10 @@ let delete_event ?sendNotifications calendar_id event_id with_token =
     with_token (fun token ->
       call_delete_event ?sendNotifications calendar_id event_id token
     )  >>= function
-    | (`OK|`No_content|`Gone|`Not_found), _headers, _body ->
-        return ()
+    | `OK, _headers, _body ->
+        return true
+    | (`No_content|`Gone|`Not_found), _, _ ->
+        return false
     | x ->
         http_fail "delete_event" x
   )

@@ -157,7 +157,7 @@ val delete_event :
   Gcalid.t ->
   Geventid.t ->
   with_token ->
-  unit Lwt.t
+  bool Lwt.t
 
 val insert_empty_event :
   ?sanitizeHtml:bool ->
