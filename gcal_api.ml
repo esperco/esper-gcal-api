@@ -371,8 +371,10 @@ let events_list
 
 type stream_error = [ `Gone | `Not_found ]
 
-type stream_item = [ `Event of Gcal_api_t.event
-                   | `Error of stream_error ]
+type stream_item = [
+  | `Event of Gcal_api_t.event
+  | `Error of stream_error
+]
 
 let events_stream
   ?alwaysIncludeEmail
