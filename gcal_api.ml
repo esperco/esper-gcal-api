@@ -369,9 +369,10 @@ let events_list
         http_fail "events_list" x
   )
 
-(* exceptions raised when fetching data from within events_stream *)
-exception Events_gone
-exception Events_not_found
+type stream_error = [ `Gone | `Not_found ]
+
+type stream_item = [ `Event of Gcal_api_t.event
+                   | `Error of stream_error ]
 
 let events_stream
   ?alwaysIncludeEmail
@@ -445,8 +446,14 @@ let events_stream
             ?updatedMin
             calid uid
           >>= (function
-            | `Gone -> Trax.raise __LOC__ Events_gone
-            | `Not_found -> Trax.raise __LOC__ Events_not_found
+            | `Gone ->
+                let acc = (max_remaining, None) in
+                return (acc, [`Error `Gone], false)
+
+            | `Not_found ->
+                let acc = (max_remaining, None) in
+                return (acc, [`Error `Not_found], false)
+
             | `OK x ->
                 let max_remaining, no_remaining =
                   match max_remaining with
@@ -473,9 +480,13 @@ let events_stream
                     Some x.evs_nextPageToken
                 in
                 let continue = not finished in
-                return ((max_remaining, page_token), x.evs_items, continue))
+                let acc = (max_remaining, page_token) in
+                let items = BatList.map (fun ev -> `Event ev) x.evs_items in
+                return (acc, items, continue))
 
-      | None -> return ((max_remaining, page_token), [], false)
+      | None ->
+          let acc = (max_remaining, None) in
+          return (acc, [], false)
     )
   in
   stream, get_last_response
@@ -488,6 +499,28 @@ type events_list_unpaged_result = [
   | `Not_found
   | `Gone
 ]
+
+let unwrap_items_from_stream
+    (items : stream_item list) : Gcal_api_t.event list * stream_error list =
+  BatList.fold_right (fun x (events, errors) ->
+    match x with
+    | `Event x -> (x :: events, errors)
+    | `Error (`Gone | `Not_found as x) -> (events, x :: errors)
+  ) items ([], [])
+
+type event_stream_result = [
+  | `Events of Gcal_api_t.event list
+  | `Error of stream_error
+]
+
+let read_event_stream stream =
+  Lwt_stream.to_list stream >>= fun items ->
+  let events, errors = unwrap_items_from_stream items in
+  match errors with
+  | [] ->
+      return (`Events events)
+  | first_error :: _ ->
+      return (`Error first_error)
 
 (*
    Fetch all the pages returned by events_list.
@@ -526,38 +559,35 @@ let events_list_unpaged
   calid uid
   : events_list_unpaged_result Lwt.t =
 
-  catch
-    (fun () ->
-       let stream, get_last_response =
-         events_stream
-           ?alwaysIncludeEmail
-           ?iCalUID
-           ?maxAttendees
-           ?maxResults
-           ?orderBy
-           ?privateExtendedProperties
-           ?q
-           ?sanitizeHtml
-           ?sharedExtendedProperties
-           ?showDeleted
-           ?showHiddenInvitations
-           ?singleEvents
-           ?syncToken
-           ?timeMax
-           ?timeMin
-           ?timeZone
-           ?updatedMin
-           calid uid in
-       Lwt_stream.to_list stream >>= fun events ->
-       let x = get_last_response () in
-       return (`OK (x.evs_timeZone, calid, events, x.evs_nextSyncToken))
-    )
-    (fun e ->
-       match Trax.unwrap e with
-       | Events_not_found -> return `Not_found
-       | Events_gone      -> return `Gone
-       | _                -> Trax.raise __LOC__ e
-    )
+  let stream, get_last_response =
+    events_stream
+      ?alwaysIncludeEmail
+      ?iCalUID
+      ?maxAttendees
+      ?maxResults
+      ?orderBy
+      ?privateExtendedProperties
+      ?q
+      ?sanitizeHtml
+      ?sharedExtendedProperties
+      ?showDeleted
+      ?showHiddenInvitations
+      ?singleEvents
+      ?syncToken
+      ?timeMax
+      ?timeMin
+      ?timeZone
+      ?updatedMin
+      calid uid
+  in
+  Lwt_stream.to_list stream >>= fun items ->
+  let events, errors = unwrap_items_from_stream items in
+  match errors with
+  | [] ->
+      let x = get_last_response () in
+      return (`OK (x.evs_timeZone, calid, events, x.evs_nextSyncToken))
+  | first_error :: _ ->
+      return (first_error :> events_list_unpaged_result)
 
 (* So we can get the time zone without doing an event list *)
 let call_get_calendar_metadata calendar_id access_token =

@@ -111,10 +111,19 @@ val events_list_unpaged :
   with_token ->
   events_list_unpaged_result Lwt.t
 
-(* exceptions raised when fetching data from within events_stream *)
-exception Events_gone
-exception Events_not_found
+(* Errors occurring when fetching data from within events_stream *)
+type stream_error = [ `Gone | `Not_found ]
 
+type stream_item = [ `Event of Gcal_api_t.event
+                   | `Error of stream_error ]
+
+(*
+   Get a stream of events, originally paged.
+
+   The result is (stream, get_last_response) where get_last_response
+   returns the last page that was fetched. It provides timezone information
+   and other fields not included in event items.
+*)
 val events_stream :
   ?alwaysIncludeEmail:bool ->
   ?iCalUID:string ->
@@ -135,7 +144,20 @@ val events_stream :
   ?updatedMin:Util_time.t ->
   Gcalid.t ->
   with_token ->
-  Gcal_api_t.event Lwt_stream.t * (unit -> Gcal_api_t.events_list_response)
+  stream_item Lwt_stream.t * (unit -> Gcal_api_t.events_list_response)
+
+type event_stream_result = [
+  | `Events of Gcal_api_t.event list
+  | `Error of stream_error
+]
+
+val read_event_stream : stream_item Lwt_stream.t -> event_stream_result Lwt.t
+  (* Read a stream of items into a list.
+
+     If any soft error (Gone, Not Found) occurs on any page
+     received from Google Calendar, the error is returned
+     and no events are returned.
+  *)
 
 val get_calendar_metadata :
   Gcalid.t ->
