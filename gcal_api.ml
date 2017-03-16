@@ -510,20 +510,6 @@ let unwrap_items_from_stream
     | `Error (`Gone | `Not_found as x) -> (events, x :: errors)
   ) items ([], [])
 
-type event_stream_result = [
-  | `Events of Gcal_api_t.event list
-  | `Error of stream_error
-]
-
-let read_event_stream stream =
-  Lwt_stream.to_list stream >>= fun items ->
-  let events, errors = unwrap_items_from_stream items in
-  match errors with
-  | [] ->
-      return (`Events events)
-  | first_error :: _ ->
-      return (`Error first_error)
-
 (*
    Fetch all the pages returned by events_list.
    The parameters are the same as those supported by events_list,

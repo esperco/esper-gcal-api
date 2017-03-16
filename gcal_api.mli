@@ -146,19 +146,6 @@ val events_stream :
   with_token ->
   stream_item Lwt_stream.t * (unit -> Gcal_api_t.events_list_response)
 
-type event_stream_result = [
-  | `Events of Gcal_api_t.event list
-  | `Error of stream_error
-]
-
-val read_event_stream : stream_item Lwt_stream.t -> event_stream_result Lwt.t
-  (* Read a stream of items into a list.
-
-     If any soft error (Gone, Not Found) occurs on any page
-     received from Google Calendar, the error is returned
-     and no events are returned.
-  *)
-
 val get_calendar_metadata :
   Gcalid.t ->
   with_token ->
